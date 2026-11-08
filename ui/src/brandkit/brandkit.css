@@ -106,3 +106,4 @@ body { margin: 0; }
 /* BlurText y SplitText envuelven el texto en <p>: que herede el tamaño del título */
 .bk h1 p, .bk h3 p, .bk-grande p, .bk-grande h3 { font: inherit; margin: 0; color: inherit; }
 .bk-hero h1 { font-size: 72px; }
+.bk-hero h1 p { justify-content: center; text-align: center; }
