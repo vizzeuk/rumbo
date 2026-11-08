@@ -1,0 +1,19 @@
+Rumbo
+Copyright (c) 2026 Vicente Cossio
+
+Este proyecto se inspira en y reutiliza ideas de:
+
+- chambaflow (https://github.com/IsrraDex36/chambaflow), licencia MIT.
+  Estructura del listado de Computrabajo y flujo de postulación por pasos.
+
+- JobSpy (https://github.com/speedyapply/JobSpy), licencia MIT.
+  Dependencia opcional para buscar en Indeed, Glassdoor y Google Jobs.
+
+- React Bits (https://reactbits.dev, https://github.com/DavidHDev/react-bits), © David Haz,
+  licencia MIT + Commons Clause. Los componentes en ui/src/rb se usan como parte de esta aplicación.
+  La Commons Clause prohíbe vender, sublicenciar o redistribuir esos componentes por sí solos: si
+  reutilizas Rumbo, mantén los componentes dentro de la aplicación y conserva este aviso.
+
+- Motion (https://motion.dev) y GSAP (https://gsap.com) para animaciones; Hugeicons (iconos libres).
+
+- Fraunces e Inter, empaquetadas vía Fontsource bajo la SIL Open Font License.

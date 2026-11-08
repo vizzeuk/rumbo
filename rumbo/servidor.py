@@ -1,0 +1,191 @@
+"""Servidor local de la interfaz (solo escucha en 127.0.0.1)."""
+import json
+import mimetypes
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+from rumbo import __version__, config, correo, db, motor
+from rumbo.fuentes import FUENTES
+
+WEB = Path(__file__).parent / "web"
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("font/woff2", ".woff2")
+
+
+def en_hilo(fn, *args):
+    threading.Thread(target=fn, args=args, daemon=True).start()
+
+
+def _estado_general(con):
+    cfg = config.cargar()
+    resumen = {e: con.execute("SELECT COUNT(*) FROM ofertas WHERE estado=?", (e,)).fetchone()[0] for e in db.ESTADOS}
+    por_fuente = {r[0]: r[1] for r in con.execute("SELECT fuente, COUNT(*) FROM ofertas GROUP BY fuente")}
+    try:
+        from rumbo.postular.portales import PORTALES
+        portales = list(PORTALES)
+    except Exception:
+        portales = []
+    try:
+        import playwright  # noqa: F401
+        tiene_pw = True
+    except ImportError:
+        tiene_pw = False
+    return {
+        "version": __version__, "config": cfg, "resumen": resumen, "motor": motor.ESTADO,
+        "bienvenida_pendiente": not cfg.get("general", {}).get("onboarding_hecho", False),
+        "correo_conectado": bool(correo.clave()), "correo_cuenta": correo.cuenta(),
+        "correos_hoy": db.contar_eventos_hoy(con, "correo") + db.contar_eventos_hoy(con, "seguimiento"),
+        "postulaciones_hoy": db.contar_eventos_hoy(con, "postulacion"),
+        "fuentes": [{"clave": k, "nombre": m.NOMBRE, "descripcion": m.DESCRIPCION, "postula": m.POSTULA,
+                     "activa": cfg["fuentes"].get(k, False), "total": por_fuente.get(m.NOMBRE, 0)}
+                    for k, m in FUENTES.items()],
+        "portales_postulacion": portales, "postulador_instalado": tiene_pw,
+    }
+
+
+class Manejador(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _json(self, datos, codigo=200):
+        cuerpo = json.dumps(datos, ensure_ascii=False, default=str).encode()
+        self.send_response(codigo)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(cuerpo)
+
+    def do_GET(self):
+        ruta = self.path.split("?")[0]
+        if ruta.startswith("/api/"):
+            con = db.conectar()
+            if ruta == "/api/estado":
+                return self._json(_estado_general(con))
+            if ruta == "/api/ofertas":
+                filas = [dict(r) for r in con.execute(
+                    "SELECT * FROM ofertas ORDER BY COALESCE(fit,-1) DESC, puntaje DESC, encontrada DESC LIMIT 1500")]
+                return self._json(filas)
+            if ruta == "/api/actividad":
+                filas = [dict(r) for r in con.execute("""SELECT e.*, o.titulo, o.fuente FROM eventos e
+                    LEFT JOIN ofertas o ON o.id=e.oferta ORDER BY e.fecha DESC LIMIT 200""")]
+                return self._json(filas)
+            if ruta == "/api/perfil":
+                return self._json({"perfil": config.perfil(), "datos": config.datos_personales()})
+            if ruta == "/api/log":
+                lineas = config.LOG.read_text(encoding="utf-8").splitlines()[-80:] if config.LOG.exists() else []
+                return self._json(lineas)
+            return self._json({"error": "no existe"}, 404)
+        archivo = WEB / ("index.html" if ruta in ("/", "") else ruta.lstrip("/"))
+        if not archivo.resolve().is_relative_to(WEB.resolve()) or not archivo.is_file():
+            archivo = WEB / "index.html"
+        tipo = mimetypes.guess_type(archivo.name)[0] or "application/octet-stream"
+        if tipo.startswith("text/") or tipo in ("application/javascript", "image/svg+xml", "application/json"):
+            tipo += "; charset=utf-8"
+        self.send_response(200)
+        self.send_header("Content-Type", tipo)
+        if "/assets/" in ruta:
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+        self.end_headers()
+        self.wfile.write(archivo.read_bytes())
+
+    def do_POST(self):
+        largo = int(self.headers.get("Content-Length", 0))
+        d = json.loads(self.rfile.read(largo) or b"{}")
+        con = db.conectar()
+        ruta = self.path
+        try:
+            if ruta == "/api/oferta":
+                oid, accion = d["id"], d["accion"]
+                campos = {k: d[k] for k in ("propuesta", "asunto", "email", "notas") if k in d}
+                if campos:
+                    con.execute(f"UPDATE ofertas SET {', '.join(k + '=?' for k in campos)} WHERE id=?",
+                                [*campos.values(), oid])
+                if accion == "evaluar":
+                    con.commit()
+                    en_hilo(lambda: motor.evaluar(db.conectar(), oid))
+                    return self._json({"ok": "La IA está evaluando. Se actualiza solo en unos segundos."})
+                if accion == "enviar_correo":
+                    con.commit()
+                    correo.enviar(con, oid)
+                    return self._json({"ok": "Correo enviado."})
+                if accion == "postular":
+                    con.commit()
+                    en_hilo(self._postular_una, oid)
+                    return self._json({"ok": "Abriendo el navegador para postular."})
+                if accion in db.ESTADOS:
+                    extra = ", enviada=?, canal='manual'" if accion == "enviada" else ""
+                    valores = [accion] + ([time.time()] if accion == "enviada" else []) + [oid]
+                    con.execute(f"UPDATE ofertas SET estado=?{extra} WHERE id=?", valores)
+                    db.evento(con, oid, f"estado:{accion}")
+                con.commit()
+                return self._json({"ok": "Guardado."})
+            if ruta == "/api/manual":
+                from rumbo.fuentes import guardar
+                oid = f"man-{int(time.time())}"
+                guardar(con, {"id": oid, "tipo": "manual", "fuente": d.get("fuente") or "Pegada a mano",
+                              "titulo": d.get("titulo") or "Oferta pegada a mano", "url": d.get("url", ""),
+                              "email": d.get("email", ""), "descripcion": d.get("texto", "")})
+                con.commit()
+                en_hilo(lambda: motor.evaluar(db.conectar(), oid))
+                return self._json({"ok": "Agregada. La IA la está evaluando."})
+            if ruta == "/api/buscar":
+                en_hilo(motor.ciclo, True)
+                return self._json({"ok": "Búsqueda iniciada."})
+            if ruta == "/api/agencias":
+                seg = d.get("segmento", "agencias")
+                en_hilo(lambda: FUENTES["agencias"].buscar(db.conectar(), int(d.get("n", 8)), seg, d.get("rubro", "")))
+                nombres = {"agencias": "agencias", "startups": "startups", "pymes": "pymes"}
+                return self._json({"ok": f"La IA está buscando {nombres.get(seg, seg)} (toma unos minutos)."})
+            if ruta == "/api/config":
+                config.guardar(d)
+                return self._json({"ok": "Ajustes guardados."})
+            if ruta == "/api/perfil":
+                if "perfil" in d:
+                    config.PERFIL.write_text(d["perfil"], encoding="utf-8")
+                if "datos" in d:
+                    config.DATOS.write_text(json.dumps(d["datos"], indent=2, ensure_ascii=False), encoding="utf-8")
+                return self._json({"ok": "Perfil guardado."})
+            if ruta == "/api/bienvenida":
+                from rumbo import bienvenida
+                r = bienvenida.aplicar(d)
+                en_hilo(motor.ciclo, True)
+                return self._json({"ok": "Listo. Rumbo empezó tu primera búsqueda.", **r})
+            if ruta == "/api/correo":
+                if d.get("cuenta"):
+                    config.guardar({"envio": {"correo": d["cuenta"]}})
+                correo.guardar_clave(d["clave"])
+                correo.probar()
+                return self._json({"ok": "Correo conectado."})
+        except Exception as e:
+            return self._json({"error": str(e)}, 400)
+        return self._json({"error": "no existe"}, 404)
+
+    @staticmethod
+    def _postular_una(oid):
+        from rumbo.postular.navegador import abrir, postular
+        con = db.conectar()
+        o = con.execute("SELECT * FROM ofertas WHERE id=?", (oid,)).fetchone()
+        p, ctx = abrir(visible=True)
+        try:
+            r = postular(ctx, con, o)
+            if r in ("enviada", "revision"):
+                con.execute("UPDATE ofertas SET estado='enviada', enviada=?, canal='portal', error=NULL WHERE id=?",
+                            (time.time(), oid))
+                db.evento(con, oid, "postulacion", o["fuente"])
+            else:
+                con.execute("UPDATE ofertas SET error=? WHERE id=?", (r[:300], oid))
+            con.commit()
+        finally:
+            ctx.close()
+            p.stop()
+
+
+def servir(abrir_navegador=False):
+    db.conectar().close()
+    servidor = ThreadingHTTPServer(("127.0.0.1", config.PUERTO), Manejador)
+    if abrir_navegador:
+        import webbrowser
+        webbrowser.open(f"http://localhost:{config.PUERTO}")
+    servidor.serve_forever()

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rumbo"
+version = "0.2.0"
+description = "Tu búsqueda de trabajo en piloto automático: busca en los portales de Chile y Latinoamérica, evalúa cada oferta con IA según tu perfil, redacta tus postulaciones y postula por ti."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Vicente Cossio" }]
+keywords = ["empleo", "trabajo", "postulaciones", "automatizacion", "ia", "chile", "latam"]
+dependencies = [
+  "keyring>=24",
+]
+
+[project.optional-dependencies]
+postular = ["playwright>=1.45"]
+jobspy = ["python-jobspy>=1.1.80"]
+todo = ["playwright>=1.45", "python-jobspy>=1.1.80"]
+
+[project.scripts]
+rumbo = "rumbo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rumbo*"]
+
+[tool.setuptools.package-data]
+rumbo = ["web/*", "web/assets/*", "plantillas/*"]
