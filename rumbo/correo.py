@@ -93,6 +93,27 @@ def seguimientos(con):
     return hechos
 
 
+def _marcar_rebotes(con, m, pendientes):
+    """Si un correo rebotó (la dirección no existe), la oportunidad se descarta y no recibe recordatorio."""
+    import re
+    if not pendientes:
+        return
+    desde = datetime.fromtimestamp(min(o["enviada"] or time.time() for o in pendientes)).strftime("%d-%b-%Y")
+    _, datos = m.search(None, f'(FROM "mailer-daemon" SINCE {desde})')
+    rebotados = set()
+    for i in (datos[0].split() if datos and datos[0] else []):
+        _, cuerpo = m.fetch(i, "(BODY.PEEK[TEXT]<0.4000>)")
+        texto = cuerpo[0][1].decode("utf-8", "ignore").lower() if cuerpo and cuerpo[0] else ""
+        rebotados |= set(re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", texto))
+    for o in pendientes:
+        if o["email"].lower() in rebotados:
+            con.execute("UPDATE ofertas SET estado='descartada', error='El correo rebotó: la dirección no existe' WHERE id=?",
+                        (o["id"],))
+            db.evento(con, o["id"], "rebote", o["email"])
+            log(f"Rebote: {o['email']}")
+    con.commit()
+
+
 def detectar_respuestas(con):
     pendientes = con.execute("SELECT id, email, titulo, enviada FROM ofertas WHERE estado='enviada' AND email!=''").fetchall()
     if not clave() or not pendientes:
@@ -103,6 +124,7 @@ def detectar_respuestas(con):
         m = imaplib.IMAP4_SSL(imap, timeout=30)
         m.login(cuenta(), clave())
         m.select("INBOX", readonly=True)
+        _marcar_rebotes(con, m, pendientes)
         for o in pendientes:
             desde = datetime.fromtimestamp(o["enviada"] or time.time()).strftime("%d-%b-%Y")
             _, datos = m.search(None, f'(FROM "{o["email"]}" SINCE {desde})')
