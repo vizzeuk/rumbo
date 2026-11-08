@@ -6,7 +6,7 @@ import json
 import re
 import time
 
-from rumbo import db, reglas
+from rumbo import db, reglas, vivo
 from rumbo.util import get, limpiar, log
 
 
@@ -25,7 +25,15 @@ def guardar(con, o):
                  o.get("url", ""), o.get("url_postular", ""), (o.get("descripcion") or "")[:8000],
                  o.get("modalidad", ""), o.get("ubicacion", ""), o.get("presupuesto", ""), o.get("email", ""),
                  o.get("publicada") or time.time(), time.time(), max(p, 0), nota, estado))
+    _avisar(o, estado == "nueva", nota)
     return estado == "nueva"
+
+
+def _avisar(o, guardada, nota=""):
+    vivo.emitir("hallazgo", id=o["id"], titulo=o["titulo"], empresa=o.get("empresa", "") or "",
+                fuente=o["fuente"], url=o.get("url", ""), sitio=vivo.sitio(o.get("url", "")),
+                ubicacion=o.get("ubicacion", "") or "", modalidad=o.get("modalidad", "") or "",
+                guardada=guardada, nota=nota or "")
 
 
 def descartar(con, o, nota):
@@ -33,6 +41,7 @@ def descartar(con, o, nota):
         VALUES (?,?,?,?,?,?,?,?,?,?)""", (o["id"], o.get("tipo", "oferta"), o["fuente"], o["titulo"],
                                            o.get("empresa", ""), o.get("url", ""), (o.get("descripcion") or "")[:8000],
                                            time.time(), "descartada", nota))
+    _avisar(o, False, nota)
 
 
 REGIONES = {  # clave interna -> nombres que la gente escribe
@@ -99,3 +108,9 @@ from rumbo.fuentes import (agencias, bne, chiletrabajos, computrabajo, empleospu
 
 FUENTES = {m.CLAVE: m for m in (laborum, trabajando, computrabajo, chiletrabajos, bne, luk, empleospublicos,
                                  firstjob, yapo, getonbrd, freelancer, linkedin, jobspy_fuente, agencias)}
+
+# Sitio de cada portal, para mostrar en la interfaz "dónde se encontró".
+SITIOS = {"laborum": "laborum.cl", "trabajando": "trabajando.cl", "computrabajo": "cl.computrabajo.com",
+          "chiletrabajos": "chiletrabajos.cl", "bne": "bne.cl", "luk": "takealuk.com", "empleospublicos": "empleospublicos.cl",
+          "firstjob": "firstjob.me", "yapo": "yapo.cl", "getonbrd": "getonbrd.com", "freelancer": "freelancer.com",
+          "linkedin": "linkedin.com", "jobspy": "indeed.com", "agencias": "Google y sitios web"}

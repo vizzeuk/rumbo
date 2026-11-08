@@ -15,23 +15,63 @@ import HoldButton from '../rb/HoldButton'
 import StatusMark from '../rb/StatusMark'
 import CircularText from '../rb/CircularText'
 import DotGrid from '../rb/DotGrid'
-import { LOGOS } from './Logos'
+import { LOGOS, PRIMERA_RONDA, TODOS_LOS_LOGOS, type LogoDef, type ColoresLogo } from './Logos'
 
-const FUENTES = [
-  { id: 'bricolage', nombre: 'Bricolage + Hanken', titulo: "'Bricolage Grotesque Variable'", texto: "'Hanken Grotesk Variable'", nota: 'Moderna con carácter: letras con personalidad, pero muy legibles.' },
-  { id: 'instrument', nombre: 'Instrument Serif + Schibsted', titulo: "'Instrument Serif'", texto: "'Schibsted Grotesk Variable'", nota: 'Editorial y elegante, como una revista. Títulos finos y grandes.' },
-  { id: 'young', nombre: 'Young Serif + Familjen', titulo: "'Young Serif'", texto: "'Familjen Grotesk Variable'", nota: 'Cálida y cercana: serif redonda con texto amable.' },
-  { id: 'gloock', nombre: 'Gloock + Bricolage', titulo: "'Gloock'", texto: "'Bricolage Grotesque Variable'", nota: 'La más llamativa: títulos de alto contraste, texto con carácter.' },
+/**
+ * Parejas tipográficas: título + texto (y a veces una tercera para datos). Todas de Fontsource,
+ * con subconjunto latin-ext (tildes, ñ, ¿¡). `peso`, `escala` y `tracking` ajustan cada letra de
+ * título a su punto ideal: una condensada necesita más tamaño que una ancha para pesar lo mismo.
+ */
+type Fuente = { id: string; nombre: string; titulo: string; texto: string; datos?: string; peso: number; escala?: number; tracking?: string; familias: string; nota: string }
+const MONO = "'Fragment Mono'"
+const FUENTES: Fuente[] = [
+  { id: 'bricolage', nombre: 'Bricolage + Hanken', titulo: "'Bricolage Grotesque Variable'", texto: "'Hanken Grotesk Variable'", peso: 700, tracking: '-0.03em', familias: 'Título: Bricolage Grotesque · Texto: Hanken Grotesk', nota: 'Grotesca con rarezas en la a, la g y la t que le dan voz propia; Hanken lee limpio en listas largas de ofertas.' },
+  { id: 'instrument', nombre: 'Instrument Serif + Schibsted', titulo: "'Instrument Serif'", texto: "'Schibsted Grotesk Variable'", peso: 400, escala: 1.14, tracking: '-0.015em', familias: 'Título: Instrument Serif · Texto: Schibsted Grotesk', nota: 'Títulos finos de revista contra un texto firme y periodístico: se siente curada, no de plantilla.' },
+  { id: 'young', nombre: 'Young Serif + Familjen', titulo: "'Young Serif'", texto: "'Familjen Grotesk Variable'", peso: 400, escala: 0.94, tracking: '-0.02em', familias: 'Título: Young Serif · Texto: Familjen Grotesk', nota: 'Serif redonda y amable con un texto de rasgos nórdicos: cálida sin ponerse infantil.' },
+  { id: 'gloock', nombre: 'Gloock + Bricolage', titulo: "'Gloock'", texto: "'Bricolage Grotesque Variable'", peso: 400, tracking: '-0.015em', familias: 'Título: Gloock · Texto: Bricolage Grotesque', nota: 'Alto contraste de afiche en los títulos y un texto con carácter: la más llamativa de las serif.' },
+  { id: 'unbounded', nombre: 'Unbounded + Onest', titulo: "'Unbounded Variable'", texto: "'Onest Variable'", datos: MONO, peso: 600, escala: 0.8, tracking: '-0.035em', familias: 'Título: Unbounded · Texto: Onest · Datos: Fragment Mono', nota: 'Títulos anchos y redondeados que hacen ver seguras las cifras grandes; Onest es sobria y rinde en pantallas chicas.' },
+  { id: 'syne', nombre: 'Syne + Figtree', titulo: "'Syne Variable'", texto: "'Figtree Variable'", peso: 760, escala: 0.94, tracking: '-0.025em', familias: 'Título: Syne · Texto: Figtree', nota: 'Syne en negrita se ensancha y se vuelve gráfica, casi un logo; Figtree la calma con un texto geométrico y simpático.' },
+  { id: 'newsreader', nombre: 'Newsreader + Host Grotesk', titulo: "'Newsreader Variable'", texto: "'Host Grotesk Variable'", datos: MONO, peso: 500, escala: 1.06, tracking: '-0.025em', familias: 'Título: Newsreader · Texto: Host Grotesk · Datos: Fragment Mono', nota: 'Serif de diario con tamaño óptico para titulares; Host es precisa y Fragment Mono ordena fechas, fit y portales.' },
+  { id: 'funnel', nombre: 'Funnel Display + Funnel Sans', titulo: "'Funnel Display Variable'", texto: "'Funnel Sans Variable'", peso: 650, tracking: '-0.03em', familias: 'Título: Funnel Display · Texto: Funnel Sans', nota: 'Una familia con dos voces: display con cortes curiosos y su hermana de texto. Coherente sin esfuerzo.' },
+  { id: 'gabarito', nombre: 'Gabarito + Literata', titulo: "'Gabarito Variable'", texto: "'Literata Variable'", peso: 800, tracking: '-0.035em', familias: 'Título: Gabarito · Texto: Literata', nota: 'Al revés de lo habitual: títulos sans compactos y texto en serif de lectura. Cuidada y poco vista.' },
+  { id: 'bagel', nombre: 'Bagel Fat One + Rethink Sans', titulo: "'Bagel Fat One'", texto: "'Rethink Sans Variable'", peso: 400, escala: 0.9, tracking: '-0.01em', familias: 'Título: Bagel Fat One · Texto: Rethink Sans', nota: 'Títulos gorditos y juguetones que le quitan peso a buscar trabajo; Rethink equilibra con un texto serio y claro.' },
+  { id: 'shoulders', nombre: 'Big Shoulders + Epilogue', titulo: "'Big Shoulders Variable'", texto: "'Epilogue Variable'", datos: MONO, peso: 800, escala: 1.2, tracking: '0em', familias: 'Título: Big Shoulders · Texto: Epilogue · Datos: Fragment Mono', nota: 'Condensada de cartel urbano, ideal para cifras y titulares cortos; Epilogue es amplia y la mono pone los datos.' },
+  { id: 'darker', nombre: 'Darker Grotesque + Geologica', titulo: "'Darker Grotesque Variable'", texto: "'Geologica Variable'", peso: 800, escala: 1.22, tracking: '-0.01em', familias: 'Título: Darker Grotesque · Texto: Geologica', nota: 'Grotesca alta y apretada con mucha presencia en negrita; Geologica tiene un aire técnico que acompaña los datos.' },
 ]
 
 const PALETAS = [
-  { id: 'leche', nombre: 'Café con leche', nota: 'Suave y tranquila, la más pastel.', c: { fondo: '#FAF6F0', superficie: '#FFFDF9', suave: '#F2E9DD', borde: '#E6D5C1', acento: '#D9A066', accion: '#8B5E3C', tinta: '#2E2219', titulo: '#3B2A20', secundario: '#7A6656' } },
-  { id: 'cortado', nombre: 'Cortado', nota: 'Más contraste: espresso profundo y acento terracota.', c: { fondo: '#F7F1E8', superficie: '#FFFCF7', suave: '#EDE3D5', borde: '#DCCBB5', acento: '#C2693E', accion: '#2B1D14', tinta: '#22170F', titulo: '#2B1D14', secundario: '#6E5A4A' } },
-  { id: 'avena', nombre: 'Avena y salvia', nota: 'Café con un verde salvia suave como acento.', c: { fondo: '#F8F5EF', superficie: '#FFFEFA', suave: '#EEE8DC', borde: '#DDD3C2', acento: '#7E9F7A', accion: '#5B4636', tinta: '#2A231C', titulo: '#3A2E24', secundario: '#776A5C' } },
+  { id: 'lino', nombre: 'Lino', nota: 'Suave y tranquila, la más pastel.', c: { fondo: '#FAF6F0', superficie: '#FFFDF9', suave: '#F2E9DD', borde: '#E6D5C1', acento: '#D9A066', accion: '#8B5E3C', tinta: '#2E2219', titulo: '#3B2A20', secundario: '#7A6656' } },
+  { id: 'arcilla', nombre: 'Arcilla', nota: 'Más contraste: marrón profundo y acento terracota.', c: { fondo: '#F7F1E8', superficie: '#FFFCF7', suave: '#EDE3D5', borde: '#DCCBB5', acento: '#C2693E', accion: '#2B1D14', tinta: '#22170F', titulo: '#2B1D14', secundario: '#6E5A4A' } },
+  { id: 'salvia', nombre: 'Salvia', nota: 'Tonos arena con un verde salvia suave como acento.', c: { fondo: '#F8F5EF', superficie: '#FFFEFA', suave: '#EEE8DC', borde: '#DDD3C2', acento: '#7E9F7A', accion: '#5B4636', tinta: '#2A231C', titulo: '#3A2E24', secundario: '#776A5C' } },
 ]
+/** Ids de paleta de la primera versión del brand kit, para no perder lo que ya estaba guardado. */
+const PALETA_ANTERIOR: Record<string, string> = { leche: 'lino', cortado: 'arcilla', avena: 'salvia' }
 
 type Eleccion = { logo: string; fuente: string; paleta: string; animaciones: string[] }
 const GUARDADO = 'rumbo-brandkit'
+const INICIAL: Eleccion = { logo: LOGOS[0].id, fuente: FUENTES[0].id, paleta: PALETAS[0].id, animaciones: [] }
+
+function cargar(): Eleccion {
+  try {
+    const g = JSON.parse(localStorage.getItem(GUARDADO) || 'null') as Partial<Record<keyof Eleccion, unknown>> | null
+    if (!g || typeof g !== 'object') return INICIAL
+    const paleta = typeof g.paleta === 'string' ? (PALETA_ANTERIOR[g.paleta] ?? g.paleta) : ''
+    return {
+      logo: TODOS_LOS_LOGOS.some(l => l.id === g.logo) ? (g.logo as string) : INICIAL.logo,
+      fuente: FUENTES.some(f => f.id === g.fuente) ? (g.fuente as string) : INICIAL.fuente,
+      paleta: PALETAS.some(p => p.id === paleta) ? paleta : INICIAL.paleta,
+      animaciones: Array.isArray(g.animaciones) ? g.animaciones.filter((a): a is string => typeof a === 'string') : [],
+    }
+  } catch {
+    return INICIAL
+  }
+}
+
+/** Variables CSS de una pareja tipográfica (la página entera o una tarjeta de muestra). */
+const varsFuente = (f: Fuente) => ({
+  '--f-titulo': f.titulo, '--f-texto': f.texto, '--f-datos': f.datos ?? f.texto,
+  '--p-titulo': String(f.peso), '--e-titulo': String(f.escala ?? 1), '--t-titulo': f.tracking ?? '-0.01em',
+}) as CSSProperties
 
 function Opcion({ elegida, onElegir, children }: { elegida: boolean; onElegir: () => void; children: ReactNode }) {
   return (
@@ -54,29 +94,78 @@ function Demo({ id, nombre, nota, gusta, cambiar, children }: { id: string; nomb
   )
 }
 
+function TarjetaLogo({ l, c, elegido, repetir, onElegir }: { l: LogoDef; c: (typeof PALETAS)[number]['c']; elegido: boolean; repetir: number; onElegir: () => void }) {
+  const claro: ColoresLogo = { tinta: c.titulo, acento: c.acento, fondo: c.fondo }
+  const app: ColoresLogo = { ...claro, fondo: c.suave }
+  const oscuro: ColoresLogo = { tinta: c.fondo, acento: c.acento, fondo: c.titulo }
+  const palabra = l.proporcion > 1
+  return (
+    <Opcion elegida={elegido} onElegir={onElegir}>
+      <div className={'bk-logo-grande' + (palabra ? ' palabra' : '')} key={l.id + repetir}><l.C c={claro} tamano={palabra ? 72 : 108} anim /></div>
+      <h3>{l.nombre}</h3><p>{l.idea}</p>
+      <div className="bk-logo-contexto">
+        <figure><span className="app" style={{ background: c.suave }}><l.Icono c={app} tamano={40} /></span><figcaption>app</figcaption></figure>
+        <figure><span className="fav"><l.Icono c={claro} tamano={32} /></span><figcaption>32 px</figcaption></figure>
+        <figure><span className="fav"><l.Icono c={claro} tamano={16} /></span><figcaption>16 px</figcaption></figure>
+        <figure><span className="app" style={{ background: c.titulo }}><l.Icono c={oscuro} tamano={40} /></span><figcaption>oscuro</figcaption></figure>
+      </div>
+      <div className="bk-pestana"><l.Icono c={{ ...claro, fondo: c.superficie }} tamano={16} /><span>Rumbo · 12 ofertas nuevas</span><i>×</i></div>
+      <div className="bk-lockups">
+        <span className="bk-lockup"><l.Icono c={claro} tamano={30} /><b>rumbo</b></span>
+        <span className="bk-lockup oscuro"><l.Icono c={oscuro} tamano={30} /><b>rumbo</b></span>
+      </div>
+    </Opcion>
+  )
+}
+
+function MuestraTipo({ f }: { f: Fuente }) {
+  return (
+    <div className="bk-tipo" style={varsFuente(f)}>
+      <div className="bk-tipo-titulo">Encontré 42 ofertas para ti</div>
+      <p className="bk-tipo-texto">Revisé Laborum, Computrabajo y LinkedIn mientras hacías otra cosa. ¿Postulo a las 12 que más calzan contigo?</p>
+      <div className="bk-tipo-cuerpo">
+        <div className="bk-tipo-oferta">
+          <div className="bk-tipo-meta">LinkedIn · hace 2 h · fit 92</div>
+          <div className="bk-tipo-cargo">Diseñadora de producto senior</div>
+          <div className="bk-tipo-empresa">Compañía Andina de Señales · Ñuñoa</div>
+          <div className="bk-tipo-chips"><span className="fuerte">¡Lista para enviar!</span><span>Remoto</span><span>Jornada completa</span></div>
+        </div>
+        <div className="bk-tipo-cifra"><b>128</b><small>postulaciones enviadas este mes</small></div>
+      </div>
+      <div className="bk-tipo-pie">
+        <div><h3>{f.nombre}</h3><small>{f.familias}</small></div>
+        <span className="bk-tipo-glifos">Aa Ññ ¿¡</span>
+      </div>
+      <p className="bk-tipo-nota">{f.nota}</p>
+    </div>
+  )
+}
+
 export default function BrandKit() {
-  const [e, setE] = useState<Eleccion>(() => JSON.parse(localStorage.getItem(GUARDADO) || 'null') || { logo: 'norte', fuente: 'bricolage', paleta: 'leche', animaciones: [] })
+  const [e, setE] = useState<Eleccion>(cargar)
   const [repetir, setRepetir] = useState(0)
   const [copiado, setCopiado] = useState(false)
   useEffect(() => localStorage.setItem(GUARDADO, JSON.stringify(e)), [e])
   const fuente = FUENTES.find(f => f.id === e.fuente)!
   const paleta = PALETAS.find(p => p.id === e.paleta)!
-  const logo = LOGOS.find(l => l.id === e.logo)!
+  const logo = TODOS_LOS_LOGOS.find(l => l.id === e.logo)!
   const c = paleta.c
   const cLogo = { tinta: c.titulo, acento: c.acento, fondo: c.fondo }
   const vars = useMemo(() => ({
     '--fondo': c.fondo, '--superficie': c.superficie, '--suave': c.suave, '--borde': c.borde, '--acento': c.acento,
     '--accion': c.accion, '--tinta': c.tinta, '--titulo': c.titulo, '--secundario': c.secundario,
-    '--f-titulo': fuente.titulo, '--f-texto': fuente.texto,
+    ...varsFuente(fuente),
   }) as CSSProperties, [c, fuente])
+  const elegirLogo = (id: string) => { setE(x => ({ ...x, logo: id })); setRepetir(r => r + 1) }
   const gusta = (id: string) => setE(x => ({ ...x, animaciones: x.animaciones.includes(id) ? x.animaciones.filter(a => a !== id) : [...x.animaciones, id] }))
   const g = (id: string) => e.animaciones.includes(id)
-  const resumen = `Brand kit Rumbo · logo: ${logo.nombre} · tipografía: ${fuente.nombre} · paleta: ${paleta.nombre} · animaciones que me gustan: ${e.animaciones.join(', ') || 'ninguna todavía'}`
+  const nombreLogo = logo.nombre + (PRIMERA_RONDA.includes(logo) ? ' (primera ronda)' : '')
+  const resumen = `Brand kit Rumbo · logo: ${nombreLogo} · tipografía: ${fuente.nombre} · paleta: ${paleta.nombre} · animaciones que me gustan: ${e.animaciones.join(', ') || 'ninguna todavía'}`
 
   return (
     <div className="bk" style={vars}>
       <nav className="bk-nav">
-        <div className="bk-marca"><logo.C c={cLogo} tamano={30} /><span>rumbo</span><small>brand kit</small></div>
+        <div className="bk-marca"><logo.Icono c={cLogo} tamano={30} /><span>rumbo</span><small>brand kit</small></div>
         <div className="bk-enlaces">{['logo', 'tipografia', 'color', 'movimiento', 'componentes', 'resumen'].map(s => <a key={s} href={'#' + s}>{s === 'tipografia' ? 'tipografía' : s}</a>)}</div>
       </nav>
 
@@ -85,7 +174,7 @@ export default function BrandKit() {
         <div className="bk-hero-centro">
           <div className="bk-giro">
             <CircularText text="RUMBO · TU BÚSQUEDA EN PILOTO AUTOMÁTICO · " spinDuration={26} size={190} fontSize={11.5} color={c.secundario} />
-            <div className="bk-giro-logo" key={e.logo + repetir}><logo.C c={cLogo} tamano={92} anim /></div>
+            <div className="bk-giro-logo" key={e.logo + repetir}><logo.Icono c={cLogo} tamano={92} anim /></div>
           </div>
           <h1><BlurText key={e.fuente} text="Encuentra tu rumbo" animateBy="words" delay={90} /></h1>
           <p>Elige un logo, una tipografía y una paleta. Todo esta página cambia en vivo con tu elección, y al final
@@ -96,17 +185,22 @@ export default function BrandKit() {
 
       <section id="logo" className="bk-sec">
         <h2>1 · Logo</h2>
-        <p className="bk-nota">Cinco ideas nuevas, todas planas (sin degradados). Pasa el mouse y elige una. Abajo de cada una, cómo se ve chica y sobre fondo oscuro.</p>
+        <p className="bk-nota">Doce conceptos nuevos, dibujados a mano y todos planos. Cada tarjeta muestra el logo grande con su animación,
+          el ícono de app, el favicon a 32 y 16 px, la versión sobre fondo oscuro y el logo junto al nombre con la tipografía que elegiste.</p>
+        <div className="bk-grilla tres">
+          {LOGOS.map(l => <TarjetaLogo key={l.id} l={l} c={c} elegido={e.logo === l.id} repetir={repetir} onElegir={() => elegirLogo(l.id)} />)}
+        </div>
+        <h3 className="bk-sub">Primera ronda</h3>
+        <p className="bk-nota">Las cinco ideas anteriores, más simples. Siguen disponibles por si alguna te sigue gustando más.</p>
         <div className="bk-grilla cinco">
-          {LOGOS.map(l => (
-            <Opcion key={l.id} elegida={e.logo === l.id} onElegir={() => { setE({ ...e, logo: l.id }); setRepetir(r => r + 1) }}>
-              <div className="bk-logo-grande" key={l.id + repetir}><l.C c={cLogo} tamano={96} anim /></div>
+          {PRIMERA_RONDA.map(l => (
+            <Opcion key={l.id} elegida={e.logo === l.id} onElegir={() => elegirLogo(l.id)}>
+              <div className="bk-logo-grande chico" key={l.id + repetir}><l.C c={cLogo} tamano={64} anim /></div>
               <h3>{l.nombre}</h3><p>{l.idea}</p>
-              <div className="bk-logo-variantes">
-                <span className="claro"><l.C c={cLogo} tamano={22} /></span>
-                <span className="claro"><l.C c={cLogo} tamano={36} /></span>
-                <span className="oscuro"><l.C c={{ tinta: c.fondo, acento: c.acento, fondo: c.titulo }} tamano={36} /></span>
-                <span className="marca-chica"><l.C c={cLogo} tamano={26} /><b>rumbo</b></span>
+              <div className="bk-logo-mini">
+                <span className="claro"><l.C c={cLogo} tamano={16} /></span>
+                <span className="claro"><l.C c={cLogo} tamano={28} /></span>
+                <span className="oscuro"><l.C c={{ tinta: c.fondo, acento: c.acento, fondo: c.titulo }} tamano={28} /></span>
               </div>
             </Opcion>
           ))}
@@ -115,15 +209,12 @@ export default function BrandKit() {
 
       <section id="tipografia" className="bk-sec">
         <h2>2 · Tipografía</h2>
-        <p className="bk-nota">Cuatro combinaciones con más carácter. Cada una usa una letra para títulos y otra para el texto de la app.</p>
+        <p className="bk-nota">Doce parejas, cada una con letra de título y letra de texto (y en algunas, una mono para datos). Todas
+          traen tildes, ñ y signos de apertura. La que elijas se aplica a toda la página.</p>
         <div className="bk-grilla dos">
           {FUENTES.map(f => (
-            <Opcion key={f.id} elegida={e.fuente === f.id} onElegir={() => setE({ ...e, fuente: f.id })}>
-              <div style={{ fontFamily: f.titulo }} className="bk-tipo-titulo">Encuentra tu rumbo</div>
-              <div style={{ fontFamily: f.titulo }} className="bk-tipo-numero">128 ofertas · 92%</div>
-              <p style={{ fontFamily: f.texto }}>Rumbo busca ofertas por ti, las evalúa con tu perfil y redacta cada postulación. Tú decides qué enviar.</p>
-              <div style={{ fontFamily: f.texto }} className="bk-tipo-ui"><span>Buscar ahora</span><span>fit 86</span><span>Enviada hace 2 h</span></div>
-              <h3 style={{ fontFamily: f.texto }}>{f.nombre}</h3><p className="bk-nota">{f.nota}</p>
+            <Opcion key={f.id} elegida={e.fuente === f.id} onElegir={() => setE(x => ({ ...x, fuente: f.id }))}>
+              <MuestraTipo f={f} />
             </Opcion>
           ))}
         </div>
@@ -134,7 +225,7 @@ export default function BrandKit() {
         <p className="bk-nota">Tres paletas planas. La que elijas se aplica a toda la página.</p>
         <div className="bk-grilla tres">
           {PALETAS.map(p => (
-            <Opcion key={p.id} elegida={e.paleta === p.id} onElegir={() => setE({ ...e, paleta: p.id })}>
+            <Opcion key={p.id} elegida={e.paleta === p.id} onElegir={() => setE(x => ({ ...x, paleta: p.id }))}>
               <div className="bk-muestras">{Object.entries(p.c).map(([k, v]) => <div key={k} className="bk-muestra"><span style={{ background: v }} /><small>{k}<br /><code>{v}</code></small></div>)}</div>
               <h3>{p.nombre}</h3><p className="bk-nota">{p.nota}</p>
             </Opcion>
@@ -177,7 +268,7 @@ export default function BrandKit() {
           <Demo id="CircularText" nombre="CircularText" nota="Texto girando alrededor del logo." gusta={g('CircularText')} cambiar={gusta}>
             <CircularText text="RUMBO · RUMBO · RUMBO · " spinDuration={14} size={120} fontSize={11} color={c.secundario} /></Demo>
           <Demo id="LogoAnimado" nombre="Logo animado" nota="El logo se dibuja al abrir la app." gusta={g('LogoAnimado')} cambiar={gusta}>
-            <div key={repetir}><logo.C c={cLogo} tamano={84} anim /></div></Demo>
+            <div key={repetir}><logo.C c={cLogo} tamano={logo.proporcion > 1 ? 52 : 84} anim /></div></Demo>
         </div>
       </section>
 
@@ -201,7 +292,7 @@ export default function BrandKit() {
 
       <section id="resumen" className="bk-sec bk-resumen">
         <h2>Tu elección</h2>
-        <div className="bk-elegido"><logo.C c={cLogo} tamano={64} /><div><b>{logo.nombre}</b> · {fuente.nombre} · {paleta.nombre}<br />
+        <div className="bk-elegido"><logo.Icono c={cLogo} tamano={64} /><div><b>{nombreLogo}</b> · {fuente.nombre} · {paleta.nombre}<br />
           <small>Animaciones: {e.animaciones.join(', ') || 'marca con ♥ las que te gusten'}</small></div></div>
         <button className="bk-btn" onClick={async () => { await navigator.clipboard.writeText(resumen); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }}>
           {copiado ? 'Copiado' : 'Copiar resumen para mandármelo'}</button>

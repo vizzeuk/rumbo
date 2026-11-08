@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { enviar, hace, NOMBRE_ESTADO, type Estado } from '../api'
 import type { Ctx } from '../App'
-import { Canal, Fit, useAviso } from '../comunes'
+import { X } from 'lucide-react'
+import { Anillo, Canal, EnSitio, useAviso } from '../comunes'
 
 export default function Detalle({ id, ofertas, estado, recargar, cerrar }: Ctx & { id: string; cerrar: () => void }) {
   const aviso = useAviso()
@@ -24,22 +25,22 @@ export default function Detalle({ id, ofertas, estado, recargar, cerrar }: Ctx &
       <motion.div className="velo" onClick={cerrar} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
       <motion.aside className="cajon" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 36 }}>
         <div className="cc">
-          <div className="chips"><Fit o={o} /><span className="chip">{o.fuente}</span>{o.modalidad && <span className="chip">{o.modalidad}</span>}
+          <div className="chips"><Anillo valor={o.fit} tamano={44} /><EnSitio url={o.url} fuente={o.fuente} />{o.modalidad && <span className="chip">{o.modalidad}</span>}
             {o.presupuesto && <span className="chip">{o.presupuesto}</span>}<Canal o={o} portales={estado.portales_postulacion} />
             <span style={{ marginLeft: 'auto' }} />
             <select style={{ width: 'auto' }} value={o.estado} onChange={e => accion(e.target.value as Estado)}>
               {Object.entries(NOMBRE_ESTADO).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>
-            <button className="btn fantasma" onClick={cerrar}>✕</button></div>
+            <button className="btn fantasma redondo-chico" onClick={cerrar} aria-label="Cerrar"><X size={18} /></button></div>
           <h2>{o.titulo}</h2>
-          <div className="hist">{o.empresa}{o.ubicacion ? ` · ${o.ubicacion}` : ''}{o.url && <> · <a href={o.url} target="_blank">Ver original ↗</a></>}</div>
+          <div className="hist">{o.empresa}{o.ubicacion ? ` · ${o.ubicacion}` : ''}</div>
         </div>
         <div className="cb">
           {o.fit != null
-            ? <div className="motivo"><b>{o.fit >= 60 ? 'Por qué calza' : 'Por qué no calza tanto'}:</b> {o.motivo}
+            ? <div className="motivo"><b>{o.fit >= 60 ? 'Por qué calza contigo' : 'Por qué no calza tanto'}:</b> {o.motivo}
               {o.precio && <><br /><b>Precio sugerido:</b> {o.precio}</>}{hitos.length > 0 && <><br /><b>Hitos:</b> {hitos.join(' · ')}</>}</div>
-            : <div className="motivo">La IA todavía no la evalúa. <button className="btn primario" style={{ marginLeft: 8 }} onClick={() => accion('evaluar')}>Evaluar y redactar</button></div>}
+            : <div className="motivo">Todavía no la leo. <button className="btn primario" style={{ marginLeft: 8 }} onClick={() => accion('evaluar')}>Leer y redactar</button></div>}
           {o.tipo === 'solo_ver' && <div className="aviso ojo">Esta fuente es solo para encontrar: Rumbo nunca envía nada ahí. Si te interesa, postula tú y usa este texto como base.</div>}
-          {o.error && <div className="aviso mal">⚠ {o.error}</div>}
+          {o.error && <div className="aviso mal">{o.error}</div>}
           <div className="sec"><label>Postulación</label>
             <input placeholder="Asunto" value={f.asunto} onChange={e => setF({ ...f, asunto: e.target.value })} style={{ marginBottom: 8 }} />
             <input placeholder="Correo de destino (si tiene)" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} style={{ marginBottom: 8 }} />

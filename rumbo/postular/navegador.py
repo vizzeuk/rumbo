@@ -47,13 +47,22 @@ def login(portal):
 
 
 def sesion_activa(pagina, portal):
+    datos = PORTALES[portal]
     try:
-        pagina.goto(PORTALES[portal]["inicio"], wait_until="domcontentloaded")
+        pagina.goto(datos["inicio"], wait_until="domcontentloaded")
         pausa(1, 2)
+        if datos.get("sesion_selector"):   # más fiable que el texto cuando el portal lo permite
+            return pagina.locator(datos["sesion_selector"]).count() > 0
         texto = pagina.inner_text("body").lower()
-        return any(s in texto for s in PORTALES[portal]["sesion_ok"])
+        return any(s in texto for s in datos["sesion_ok"])
     except Exception:
         return False
+
+
+def habilitado(portal, env=None):
+    """Un portal con "opcion" (por ejemplo LinkedIn) solo se usa si esa opción de envío está en True."""
+    opcion = PORTALES.get(portal, {}).get("opcion")
+    return not opcion or bool((env or config.cargar()["envio"]).get(opcion))
 
 
 def _texto(pagina):
@@ -76,36 +85,54 @@ def _clic_texto(pagina, textos):
     return None
 
 
-def _campos(pagina):
-    """Campos visibles del formulario que están vacíos, con su etiqueta."""
-    return pagina.evaluate("""() => {
+def _campos(pagina, raiz=None):
+    """Campos visibles del formulario que están vacíos, con su etiqueta.
+
+    raiz: selector CSS opcional para mirar solo dentro de un contenedor (por ejemplo el modal de
+    LinkedIn), así no se cuelan el buscador u otros formularios de la página."""
+    return pagina.evaluate("""(raiz) => {
+      const base = (raiz && document.querySelector(raiz)) || document;
       const visibles = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+      // Algunos portales repiten el texto de la etiqueta (una copia visible y otra para lectores de pantalla).
+      const unico = t => {
+        const u = [...new Set((t || '').split('\\n').map(s => s.trim()).filter(Boolean))].join(' ').replace(/\\s+/g, ' ');
+        const m = (u.length - 1) / 2;   // "Pregunta Pregunta" -> "Pregunta"
+        return Number.isInteger(m) && m > 0 && u.slice(0, m) === u.slice(m + 1) ? u.slice(0, m) : u;
+      };
       const etiqueta = el => {
-        if (el.id) { const l = document.querySelector(`label[for="${el.id}"]`); if (l) return l.innerText.trim(); }
-        const p = el.closest('label'); if (p) return p.innerText.trim();
+        if (el.id) { const l = base.querySelector(`label[for="${CSS.escape(el.id)}"]`); if (l) return unico(l.innerText); }
+        const p = el.closest('label'); if (p) return unico(p.innerText);
         return (el.getAttribute('aria-label') || el.placeholder || el.name || '').trim();
       };
+      // "Selecciona una opción" y similares no cuentan como respuesta.
+      const marcador = t => /^(select|selecciona|seleccione|seleccionar|elige|escoge|choose)\\b/i.test((t || '').trim());
+      const sinElegir = el => el.selectedIndex <= 0 && marcador(el.options[0]?.text);
       const campos = []; let i = 0;
-      document.querySelectorAll('input, textarea, select').forEach(el => {
+      base.querySelectorAll('input, textarea, select').forEach(el => {
         const tipo = (el.type || el.tagName).toLowerCase();
         if (!visibles(el) || ['hidden','submit','button','file','password','search'].includes(tipo)) return;
+        if ((el.id || '').includes('follow-company')) return;   // "seguir a la empresa" no es una pregunta
         if (tipo === 'radio' || tipo === 'checkbox') {
-          if (document.querySelector(`input[name="${el.name}"]:checked`)) return;
+          if (base.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`)) return;
           if (campos.find(c => c.nombre === el.name)) { campos.find(c => c.nombre === el.name).opciones.push(etiqueta(el)); return; }
           el.setAttribute('data-rumbo', 'c' + i);
-          campos.push({id: 'c' + (i++), nombre: el.name, tipo, etiqueta: (el.closest('fieldset')?.querySelector('legend')?.innerText || el.name || '').trim(), opciones: [etiqueta(el)]});
+          campos.push({id: 'c' + (i++), nombre: el.name, tipo, etiqueta: unico(el.closest('fieldset')?.querySelector('legend')?.innerText || el.name || ''), opciones: [etiqueta(el)]});
           return;
         }
-        if (el.value && el.value.trim()) return;
+        if (tipo === 'select-one' ? !sinElegir(el) && el.value : el.value && el.value.trim()) return;
         el.setAttribute('data-rumbo', 'c' + i);
-        campos.push({id: 'c' + (i++), tipo: tipo === 'select-one' ? 'select' : tipo, etiqueta: etiqueta(el),
-                     requerido: el.required, opciones: tipo === 'select-one' ? [...el.options].map(o => o.text) : []});
+        const campo = {id: 'c' + (i++), tipo: tipo === 'select-one' ? 'select' : tipo, etiqueta: etiqueta(el),
+                       requerido: el.required || el.getAttribute('aria-required') === 'true',
+                       opciones: tipo === 'select-one' ? [...el.options].map(o => o.text.trim()).filter(t => t && !marcador(t)) : []};
+        if (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list') campo.autocompletar = true;
+        campos.push(campo);
       });
       return campos;
-    }""")
+    }""", raiz)
 
 
-def _rellenar(pagina, campos, respuestas):
+def _rellenar(pagina, campos, respuestas, tecleo=False):
+    """tecleo=True escribe los textos cortos tecla por tecla con pausas, como una persona."""
     for c in campos:
         valor = respuestas.get(c["id"])
         if valor in (None, ""):
@@ -123,6 +150,9 @@ def _rellenar(pagina, campos, respuestas):
                     if (etiqueta(el).toLowerCase().trim().startsWith(v) || v.startsWith(etiqueta(el).toLowerCase().trim())) { el.click(); return; }
                   }
                 }""", [c["nombre"], valor])
+            elif tecleo and len(str(valor)) <= 120:
+                pagina.locator(sel).click()
+                pagina.locator(sel).press_sequentially(str(valor), delay=random.randint(60, 160))
             else:
                 pagina.fill(sel, str(valor))
             pausa(0.3, 0.9)
@@ -136,6 +166,11 @@ def postular(ctx, con, oferta):
     portal = PORTALES.get(oferta["fuente"])
     if not portal:
         return "error: portal sin postulación automática"
+    if not habilitado(oferta["fuente"], env):
+        return f"error: la postulación en {oferta['fuente']} está apagada (opción envio.{portal['opcion']})"
+    if oferta["fuente"] == "LinkedIn":
+        from rumbo.postular.linkedin import postular_linkedin
+        return postular_linkedin(ctx, con, oferta)
     pagina = ctx.new_page()
     try:
         pagina.goto(oferta["url_postular"] or oferta["url"], wait_until="domcontentloaded")
@@ -191,16 +226,21 @@ def postular_pendientes(con):
     env = config.cargar()["envio"]
     candidatas = con.execute("""SELECT * FROM ofertas WHERE estado='lista' AND tipo='oferta' AND email='' AND fit>=?
         ORDER BY fit DESC""", (env["umbral"],)).fetchall()
-    candidatas = [o for o in candidatas if o["fuente"] in PORTALES]
+    candidatas = [o for o in candidatas if o["fuente"] in PORTALES and habilitado(o["fuente"], env)]
     if not candidatas:
         return 0
     p, ctx = abrir(visible=env.get("revisar_antes_de_enviar", True))
     hechas = 0
+    detenidos = set()   # portales sin sesión o con tope del propio portal: no se insiste en este ciclo
     try:
         for o in candidatas:
+            if o["fuente"] in detenidos:
+                continue
             if db.contar_eventos_hoy(con, "postulacion", o["fuente"]) >= env["limite_portal_dia"]:
                 continue
             resultado = postular(ctx, con, o)
+            if resultado == "sesion" or resultado.startswith("error: tope diario"):
+                detenidos.add(o["fuente"])
             if resultado in ("enviada", "revision"):
                 con.execute("UPDATE ofertas SET estado='enviada', enviada=?, canal=?, error=NULL WHERE id=?",
                             (time.time(), "portal" if resultado == "enviada" else "portal (revisada)", o["id"]))
@@ -212,7 +252,7 @@ def postular_pendientes(con):
                 con.execute("UPDATE ofertas SET error=? WHERE id=?", (resultado[:300], o["id"]))
             con.commit()
             log(f"Postulación {o['fuente']}: {o['titulo'][:60]} → {resultado}")
-            pausa(20, 60)   # ritmo humano entre postulaciones
+            pausa(*PORTALES[o["fuente"]].get("pausa_entre", (20, 60)))   # ritmo humano entre postulaciones
     finally:
         ctx.close()
         p.stop()

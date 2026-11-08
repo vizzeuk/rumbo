@@ -1,105 +1,110 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import {
-  Activity01Icon, Building03Icon, Database01Icon, Home01Icon, Settings01Icon, Task01Icon, UserCircleIcon,
-} from '@hugeicons/core-free-icons'
-import ClickSpark from './rb/ClickSpark'
+import { Compass, Inbox, Settings2, UserRound } from 'lucide-react'
 import StatusMark from './rb/StatusMark'
 import Logo from './Logo'
 import { enviar, hace, leer, type EstadoGeneral, type Oferta } from './api'
-import { Icono, useAviso } from './comunes'
-import Inicio from './paginas/Inicio'
-import Oportunidades from './paginas/Oportunidades'
-import Clientes from './paginas/Clientes'
-import Actividad from './paginas/Actividad'
-import Fuentes from './paginas/Fuentes'
+import { EASE, RESORTE, useAviso } from './comunes'
+import { useVivo } from './vivo'
+import Buscar from './paginas/Buscar'
+import Postulaciones from './paginas/Postulaciones'
 import Perfil from './paginas/Perfil'
 import Ajustes from './paginas/Ajustes'
 import Bienvenida from './paginas/Bienvenida'
 import Detalle from './paginas/Detalle'
 
 const VISTAS = [
-  { id: 'inicio', nombre: 'Inicio', icono: Home01Icon },
-  { id: 'oportunidades', nombre: 'Oportunidades', icono: Task01Icon },
-  { id: 'clientes', nombre: 'Clientes por correo', icono: Building03Icon },
-  { id: 'actividad', nombre: 'Actividad', icono: Activity01Icon },
-  { id: 'fuentes', nombre: 'Fuentes', icono: Database01Icon },
-  { id: 'perfil', nombre: 'Mi perfil', icono: UserCircleIcon },
-  { id: 'ajustes', nombre: 'Ajustes', icono: Settings01Icon },
+  { id: 'buscar', nombre: 'Buscar', icono: Compass },
+  { id: 'postulaciones', nombre: 'Postulaciones', icono: Inbox },
+  { id: 'perfil', nombre: 'Perfil', icono: UserRound },
+  { id: 'ajustes', nombre: 'Ajustes', icono: Settings2 },
 ] as const
 type Vista = (typeof VISTAS)[number]['id']
+const vistaDeHash = (): Vista => (VISTAS.some(v => v.id === location.hash.slice(1)) ? location.hash.slice(1) as Vista : 'buscar')
 
 export type Ctx = {
   estado: EstadoGeneral; ofertas: Oferta[]; recargar: () => Promise<void>
   abrir: (id: string) => void; ir: (v: Vista) => void
 }
 
+/** Isla de estado: se estira cuando estoy trabajando y muestra qué hago. */
+function Isla({ estado, alClic }: { estado: EstadoGeneral; alClic: () => void }) {
+  const m = estado.motor
+  const auto = estado.config.envio.modo_automatico
+  return (
+    <motion.button className={'isla' + (m.corriendo ? ' activa' : '')} layout onClick={alClic} transition={RESORTE}>
+      <StatusMark status={m.corriendo ? 'running' : 'done'} size={16} color="var(--acento)" doneColor="var(--exito)" />
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span key={m.corriendo ? m.paso : 'quieto'} initial={{ y: 12, opacity: 0, filter: 'blur(4px)' }} animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+          exit={{ y: -12, opacity: 0, filter: 'blur(4px)' }} transition={{ duration: 0.3, ease: EASE }}>
+          {m.corriendo ? m.paso || 'Trabajando' : auto ? `Piloto automático${m.ultimo ? ` · ${hace(m.ultimo)}` : ''}` : 'En espera'}
+        </motion.span>
+      </AnimatePresence>
+    </motion.button>
+  )
+}
+
 export default function App() {
   const aviso = useAviso()
   const [estado, setEstado] = useState<EstadoGeneral | null>(null)
   const [ofertas, setOfertas] = useState<Oferta[]>([])
-  const [vista, setVista] = useState<Vista>((location.hash.slice(1) as Vista) || 'inicio')
+  const [vista, setVista] = useState<Vista>(vistaDeHash)
   const [sel, setSel] = useState<string | null>(null)
 
   const recargar = useCallback(async () => {
     const [e, o] = await Promise.all([leer<EstadoGeneral>('/api/estado'), leer<Oferta[]>('/api/ofertas')])
     setEstado(e); setOfertas(o)
   }, [])
+  const { corrida } = useVivo(recargar)
 
   useEffect(() => {
     recargar()
-    const t = window.setInterval(recargar, 15000)
-    const h = () => setVista((location.hash.slice(1) as Vista) || 'inicio')
+    const t = window.setInterval(recargar, 20000)
+    const h = () => setVista(vistaDeHash())
     window.addEventListener('hashchange', h)
     return () => { window.clearInterval(t); window.removeEventListener('hashchange', h) }
   }, [recargar])
 
   const ir = (v: Vista) => { location.hash = v; setVista(v) }
-  const buscar = async () => { const r = await enviar('/api/buscar', {}); aviso(r.error || r.ok || ''); window.setTimeout(recargar, 1500) }
+  const buscar = async () => {
+    const r = await enviar('/api/buscar', {})
+    if (r.error) aviso(r.error, true)
+    ir('buscar'); window.setTimeout(recargar, 800)
+  }
 
-  if (!estado) return <div className="bienvenida"><Logo tamano={72} /></div>
-  if (estado.bienvenida_pendiente) return <Bienvenida alTerminar={recargar} />
+  if (!estado) return <div className="cargando"><Logo tamano={72} /></div>
+  if (estado.bienvenida_pendiente) return <Bienvenida alTerminar={async () => { await recargar(); ir('buscar') }} />
 
   const ctx: Ctx = { estado, ofertas, recargar, abrir: setSel, ir }
-  const m = estado.motor
-  const Pagina = { inicio: Inicio, oportunidades: Oportunidades, clientes: Clientes, actividad: Actividad,
-    fuentes: Fuentes, perfil: Perfil, ajustes: Ajustes }[vista] ?? Inicio
+  const listas = estado.resumen.lista || 0
 
   return (
     <div className="app">
-      <aside className="lateral">
-        <div className="marca"><Logo tamano={38} /><b>rumbo</b></div>
-        <nav className="nav">
+      <header className="barra">
+        <a className="marca" onClick={() => ir('buscar')}><Logo tamano={30} animado={false} /><b>rumbo</b></a>
+        <nav className="pestanas">
           {VISTAS.map(v => (
-            <a key={v.id} className={vista === v.id ? 'on' : ''} onClick={() => ir(v.id)}>
-              {vista === v.id && <motion.span layoutId="nav-fondo" className="fondo" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
-              <Icono icono={v.icono} />{v.nombre}
-              {v.id === 'oportunidades' && estado.resumen.lista > 0 && <span className="cuenta">{estado.resumen.lista}</span>}
-            </a>
+            <button key={v.id} className={vista === v.id ? 'on' : ''} onClick={() => ir(v.id)}>
+              {vista === v.id && <motion.span layoutId="pestana" className="pestana-fondo" transition={RESORTE} />}
+              <v.icono size={17} strokeWidth={2.1} /><span>{v.nombre}</span>
+              {v.id === 'postulaciones' && listas > 0 && <motion.em key={listas} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={RESORTE}>{listas}</motion.em>}
+            </button>
           ))}
         </nav>
-        <div className="motor">
-          <StatusMark status={m.corriendo ? 'running' : 'done'} size={18} color={m.corriendo ? '#8B5E3C' : '#7FAE8A'} />
-          <div>
-            <b>{m.corriendo ? 'Trabajando' : 'En piloto automático'}</b>
-            {m.corriendo ? m.paso || '...' : m.ultimo ? `Última búsqueda ${hace(m.ultimo)}` : `Busca cada ${estado.config.ciclo.horas} h`}
-          </div>
-        </div>
-        <ClickSpark sparkColor={['#E8B98F', '#8B5E3C']} sparkCount={10} sparkRadius={26}>
-          <button className="btn primario ancho" onClick={buscar} disabled={m.corriendo}>Buscar ahora</button>
-        </ClickSpark>
-      </aside>
-      <main>
+        <Isla estado={estado} alClic={() => ir('buscar')} />
+      </header>
+      <main className={'vista-' + vista}>
         <AnimatePresence mode="wait">
-          <motion.div key={vista} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}>
-            <Pagina {...ctx} />
+          <motion.div key={vista} initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -8, filter: 'blur(6px)' }} transition={{ duration: 0.3, ease: EASE }}>
+            {vista === 'buscar' && <Buscar {...ctx} corrida={corrida} buscar={buscar} />}
+            {vista === 'postulaciones' && <Postulaciones {...ctx} />}
+            {vista === 'perfil' && <Perfil {...ctx} />}
+            {vista === 'ajustes' && <Ajustes {...ctx} />}
           </motion.div>
         </AnimatePresence>
       </main>
-      <AnimatePresence>
-        {sel && <Detalle key={sel} id={sel} {...ctx} cerrar={() => setSel(null)} />}
-      </AnimatePresence>
+      <AnimatePresence>{sel && <Detalle key={sel} id={sel} {...ctx} cerrar={() => setSel(null)} />}</AnimatePresence>
     </div>
   )
 }

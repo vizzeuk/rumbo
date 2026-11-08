@@ -1,7 +1,7 @@
 """Asistente de bienvenida: convierte las respuestas del primer uso en perfil, datos y búsqueda."""
 import json
 
-from rumbo import config, ia
+from rumbo import catalogo, config, ia
 
 SISTEMA = """Ordenas el perfil profesional de una persona para que una IA escriba sus postulaciones.
 Usa SOLO lo que la persona escribió. No inventes experiencia, cifras, títulos ni idiomas. Español neutro,
@@ -45,9 +45,14 @@ def perfil_basico(d):
 
 def aplicar(d):
     """Guarda datos, búsqueda y perfil. d viene de la interfaz (ver web: Bienvenida)."""
-    datos = dict(config.datos_personales(), **{k: v for k, v in d.get("datos", {}).items() if v is not None})
+    datos = dict(config.datos_personales(), **{k: v for k, v in d.get("datos", {}).items() if v})
     config.DATOS.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    fuentes_sugeridas = {}
+    if d.get("eleccion"):                 # onboarding por clics: situación + rubro + cargos
+        r = catalogo.busqueda_desde(d["eleccion"])
+        d.setdefault("busqueda", {}).update(r["busqueda"])
+        fuentes_sugeridas = r["fuentes"]
     b = dict(d.get("busqueda", {}))
     b["consultas"] = _lista(b.get("consultas")) or _lista(b.get("area"))
     b["palabras_clave"] = _lista(b.get("palabras_clave"))
@@ -57,13 +62,20 @@ def aplicar(d):
         texto = f"{b.get('area', '')} {' '.join(b['consultas'])}".lower()
         b["preset"] = "tecnologia" if any(p in texto for p in PRESETS_TECNOLOGIA) else "general"
     cambios = {"busqueda": b, "general": {"onboarding_hecho": True}}
+    if fuentes_sugeridas:
+        cambios["fuentes"] = fuentes_sugeridas
+    modo = d.get("automatizacion")      # buscar | preparar | piloto
+    if modo:
+        cambios["envio"] = {"modo_automatico": modo == "piloto", "revisar_antes_de_enviar": modo != "piloto"}
     if d.get("ia"):
         cambios["ia"] = d["ia"]
     if datos.get("email"):
-        cambios["envio"] = {"correo": datos["email"],
-                            "nombre": f"{datos.get('nombre', '')} {datos.get('apellido', '')}".strip()}
+        cambios.setdefault("envio", {}).update(
+            correo=datos["email"], nombre=f"{datos.get('nombre', '')} {datos.get('apellido', '')}".strip())
     config.guardar(cambios)
 
+    if d.get("perfil_importado"):        # ya lo guardó perfil_prompt.importar
+        return {"preset": b["preset"], "consultas": b["consultas"]}
     perfil = perfil_basico(d)
     if d.get("usar_ia") and d.get("experiencia"):
         try:

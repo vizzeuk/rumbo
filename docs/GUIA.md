@@ -1,28 +1,39 @@
 # Guía de uso
 
-## Primer uso: el asistente de bienvenida
-En cuatro pasos le cuentas a Rumbo:
-1. **Quién eres:** nombre, correo, ciudad y LinkedIn (opcional).
-2. **Qué trabajo buscas:** tu área o cargo, qué escribirías en un buscador de empleos, palabras que te
-   interesan y lo que no quieres.
-3. **Cómo quieres trabajar:** remoto, híbrido o presencial; jornada completa, part time, por proyecto o
-   práctica; región y horario.
-4. **Tu experiencia:** pega tu CV o cuéntala como quieras. Si marcas "Que la IA ordene mi perfil", lo
-   organiza usando solo lo que escribiste.
+## Primer uso: la bienvenida
+Todo por clics, una pregunta por pantalla:
+1. **En qué momento estás:** práctica, primer trabajo, trabajar mientras estudias, ingreso extra,
+   freelance, cambiarte de trabajo o volver a trabajar.
+2. **Tu rubro:** tecnología, diseño, marketing, ventas, contabilidad, salud, educación y más.
+3. **Los cargos:** Rumbo te sugiere cargos de tu rubro (puedes agregar otros). De ahí salen las
+   búsquedas que escribe en cada portal, ajustadas a tu momento (por ejemplo "práctica contador").
+4. **Cómo quieres trabajar:** remoto, híbrido o presencial, y la región.
+5. **Tu perfil:** con la IA que ya usas (recomendado) o rápido, con tu nombre, correo y unas líneas de
+   experiencia. Aquí también puedes subir tu CV.
+6. **Cuánto hace solo:** solo buscar, dejarlo todo listo para tu clic final, o piloto automático.
 
-Al terminar, Rumbo hace su primera búsqueda.
+Al terminar ves tu primera búsqueda en vivo.
+
+## Tu perfil con la IA que ya usas
+En **Perfil → Armarlo con tu IA**:
+1. Copia el mensaje.
+2. Pégalo en ChatGPT, Claude o Gemini y respóndele lo que te pregunte (si ya te conoce, usa eso).
+3. Pega aquí la respuesta completa. Rumbo guarda tu perfil, tus datos de contacto y tu búsqueda.
 
 ## Las pantallas
-- **Inicio:** tu resumen (encontradas, listas, enviadas, respuestas), el embudo, el estado de las
-  conexiones y las mejores oportunidades del día.
-- **Oportunidades:** el tablero. Arrastra tarjetas entre etapas o usa la vista Lista para ordenar por fit
-  o fecha. Haz clic en una para ver por qué calza, editar la postulación y enviarla.
-- **Clientes por correo:** si trabajas por tu cuenta, elige pymes, startups o agencias (y un rubro) y la
-  IA busca empresas con su correo publicado y les escribe.
-- **Actividad:** todo lo que hizo Rumbo y lo que necesita tu atención (por ejemplo, iniciar sesión).
-- **Fuentes:** enciende o apaga cada portal.
-- **Mi perfil:** la fuente de verdad. Todo lo que la IA escribe sale de aquí.
-- **Ajustes:** qué buscas, el envío automático, el correo y la IA.
+- **Buscar:** tu búsqueda en una frase ("Busco *un ingreso extra* de *tecnología* como *desarrollador*,
+  *remoto*"). Toca cada parte para cambiarla. Con **Buscar ahora** ves el radar: cada portal se ilumina
+  mientras lo reviso, y a la derecha aparece en vivo lo que encuentro, con enlace a la página original,
+  lo que descarto y por qué, y el calce de cada oferta cuando la leo. Al final puedes **deslizar para
+  postular** a todas las que calzan o revisarlas una por una.
+- **Postulaciones:** todo lo que encontré, filtrado por etapa (para enviar, por leer, enviadas,
+  respondieron, empresas por correo, descartadas). En **Revisar una por una** las ves como tarjetas:
+  derecha para enviar, izquierda para saltar (también con las flechas del teclado).
+- **Perfil:** tu perfil, tus datos para formularios y tu CV.
+- **Ajustes:** cuánto hace solo y los topes diarios, qué portales revisa, la búsqueda fina, empresas a
+  las que escribir por correo, tu correo y la IA.
+
+Arriba a la derecha, la isla oscura te dice qué estoy haciendo en este momento.
 
 ## El fit
 Un número de 0 a 100 que la IA calcula comparando la oferta con tu perfil y con lo que buscas
@@ -37,11 +48,15 @@ Según la oferta, en el detalle verás uno de estos botones:
 - **Ver la oferta y postular yo:** en fuentes que son solo para encontrar.
 
 ## Modo automático
-En **Ajustes → Envío**. Encendido, en cada búsqueda Rumbo:
+En **Ajustes → Automatización** (piloto automático). Encendido, en cada búsqueda Rumbo:
 - envía los correos con fit igual o mayor al umbral, hasta el tope diario;
 - postula en los portales donde iniciaste sesión, hasta el tope por portal;
 - manda un recordatorio a quien no respondió en N días;
 - revisa tu correo y mueve a "Respondieron" lo que tenga respuesta.
+
+**Postular a todo lo que calza:** al terminar una búsqueda, desliza el botón para postular a todas las
+listas de una vez. Respeta los topes diarios de Ajustes; si quieres más volumen, súbelos de a poco (los
+portales bloquean cuentas que postulan demasiado rápido).
 
 Recomendación: parte con el modo apagado, revisa las primeras postulaciones y ajusta tu perfil. Después
 enciéndelo con un umbral alto (75 a 80) y topes bajos (10 a 20 por día).

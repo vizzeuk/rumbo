@@ -11,7 +11,7 @@ redacta tus postulaciones y postula por ti. Para cualquier profesión.</p>
   <a href="CONTRIBUIR.md">Contribuir</a>
 </p>
 
-![Inicio de Rumbo](docs/img/inicio.png)
+![Rumbo buscando en vivo](docs/img/busqueda.png)
 
 ## Qué hace
 
@@ -29,14 +29,25 @@ redacta tus postulaciones y postula por ti. Para cualquier profesión.</p>
 - **Consigue clientes por correo** si trabajas por tu cuenta: la IA busca pymes, startups o agencias con
   su correo publicado y les escribe un correo humano, uno por uno.
 - **Hace el seguimiento:** recordatorio a los N días y aviso cuando alguien te responde.
-- **Todo queda ordenado** en un tablero: Nuevas → Listas → Enviadas → Respondieron → Entrevistas.
+- **Lo ves trabajar en vivo:** un radar con cada portal, la lista de lo que va encontrando (con enlace a la
+  página original), lo que descarta y por qué, y cómo lee y puntúa cada oferta.
+- **Arma tu búsqueda con clics:** "Busco *mi práctica* de *marketing* como *community manager*, *remoto*".
+  Situación, rubro y cargos sugeridos, sin escribir consultas.
+- **Tu perfil con la IA que ya usas:** copias un mensaje, lo pegas en ChatGPT, Claude o Gemini y pegas de
+  vuelta la respuesta. Rumbo arma tu perfil y tu búsqueda con eso.
+- **Postula a todo lo que calza de una vez** (desliza para confirmar) o **revísalas una por una**
+  deslizando tarjetas: derecha para enviar, izquierda para saltar.
 
-LinkedIn, Indeed y Yapo son **solo para encontrar**: Rumbo nunca postula ni escribe ahí.
+LinkedIn, Indeed y Yapo son **solo para encontrar**: Rumbo no postula ni escribe ahí. La única
+excepción es opcional y viene apagada: postular en LinkedIn con "Solicitud sencilla"
+(`envio.linkedin_auto`), con riesgo alto de que LinkedIn restrinja tu cuenta (ver
+[Cómo funciona](docs/COMO-FUNCIONA.md#uso-responsable)).
 
 | | |
 |---|---|
-| ![Bienvenida](docs/img/bienvenida.png) | ![Tablero](docs/img/oportunidades.png) |
-| ![Detalle de una oferta](docs/img/detalle.png) | ![Clientes por correo](docs/img/clientes.png) |
+| ![Inicio: la búsqueda en una frase](docs/img/inicio.png) | ![Bienvenida por clics](docs/img/bienvenida.png) |
+| ![Fin de una búsqueda](docs/img/cierre.png) | ![Revisar una por una](docs/img/revisar.png) |
+| ![Postulaciones](docs/img/postulaciones.png) | ![Perfil con tu IA](docs/img/perfil.png) |
 
 ## Instalación rápida
 
@@ -48,8 +59,8 @@ playwright install chromium        # solo para postular en portales
 rumbo                               # abre http://localhost:8765
 ```
 
-La primera vez aparece un asistente de bienvenida: contestas quién eres y qué buscas, y Rumbo empieza
-a buscar. Guía completa, incluida la instalación desde el código: [docs/INSTALACION.md](docs/INSTALACION.md).
+La primera vez aparece una bienvenida por clics: en qué momento estás, tu rubro, los cargos, cómo quieres
+trabajar, tu perfil y cuánto quieres que haga solo. Al terminar ves tu primera búsqueda en vivo. Guía completa, incluida la instalación desde el código: [docs/INSTALACION.md](docs/INSTALACION.md).
 
 ## La IA: sin API key si tienes Claude Code
 
@@ -73,6 +84,7 @@ Más detalle en [docs/COMO-FUNCIONA.md](docs/COMO-FUNCIONA.md#uso-responsable).
 ## Créditos
 
 - [React Bits](https://reactbits.dev) (MIT + Commons Clause) para las animaciones de la interfaz.
+- [Bencho](https://bencho.dev) (bloques gratuitos, MIT): deslizar para confirmar, interruptores y avisos.
 - [chambaflow](https://github.com/IsrraDex36/chambaflow) (MIT): flujo de postulación en Computrabajo.
 - [JobSpy](https://github.com/speedyapply/JobSpy) (MIT): búsqueda opcional en Indeed.
 

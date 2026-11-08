@@ -51,6 +51,20 @@ PORTALES = {
         "boton_postular": ["text=Postular", "text=Postularme"],
         "exito": ["postulación enviada", "ya postulaste", "postulaste"],
     },
+    # RIESGO ALTO: las condiciones de LinkedIn prohíben la automatización y pueden restringir tu cuenta.
+    # Solo se usa si config envio.linkedin_auto es True. El flujo propio está en postular/linkedin.py
+    # ("Solicitud sencilla"); boton_postular y exito quedan como referencia para el flujo genérico.
+    "LinkedIn": {
+        "login": "https://www.linkedin.com/login",
+        "inicio": "https://www.linkedin.com/feed/",
+        "sesion_ok": ["mi red", "mensajes", "notificaciones", "my network", "messaging", "notifications"],
+        # Con sesión, la barra superior enlaza a tu red y a tus mensajes; la página pública nunca.
+        "sesion_selector": "#global-nav, nav.global-nav, a[href*='/mynetwork/'], a[href*='/messaging/']",
+        "boton_postular": ["#jobs-apply-button-id", "text=Solicitud sencilla", "text=Easy Apply"],
+        "exito": ["se envió tu solicitud", "solicitud enviada", "your application was sent", "application sent"],
+        "opcion": "linkedin_auto",        # opción de config.envio que debe estar en True para postular aquí
+        "pausa_entre": (30, 90),          # segundos de pausa aleatoria después de cada postulación
+    },
 }
 
 BOTONES_AVANZAR = ["Continuar", "Siguiente", "Guardar y continuar", "Next", "Continue"]

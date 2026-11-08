@@ -34,3 +34,7 @@ cd ui && npm run dev        # interfaz con recarga en vivo; usa la API del puert
 Los componentes de `ui/src/rb` vienen de [React Bits](https://reactbits.dev) bajo MIT + Commons Clause:
 se pueden usar y modificar dentro de esta aplicación, pero no vender ni redistribuir por separado.
 Mantén el comentario de autoría al inicio de cada archivo.
+
+## Bloques de Bencho
+Los archivos de `ui/src/bencho` son bloques **gratuitos** de [Bencho](https://bencho.dev), bajo licencia MIT
+(ver `NOTICE`). No agregues bloques Pro de Bencho al repositorio: su licencia no permite publicarlos.

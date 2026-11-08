@@ -15,7 +15,7 @@ export interface Config {
   general: { onboarding_hecho: boolean }
   ia: { proveedor: string; modelo: string; base_url: string; variable_clave: string; evaluar_por_ciclo: number }
   busqueda: {
-    preset: string; area: string; consultas: string[]; palabras_clave: string[]; excluir: string[]
+    preset: string; area: string; situacion: string; rubro: string; cargos: string[]; consultas: string[]; palabras_clave: string[]; excluir: string[]
     modalidades: string[]; jornadas: string[]; region: string; pais: string; excluir_ingles: boolean
   }
   fuentes: Record<string, boolean>
@@ -23,6 +23,13 @@ export interface Config {
     revisar_antes_de_enviar: boolean; dias_seguimiento: number; correo: string; nombre: string }
   ciclo: { horas: number; desde: number; hasta: number }
 }
+
+export interface Situacion { id: string; nombre: string; detalle: string; jornadas: string[] }
+export interface Rubro { id: string; nombre: string; cargos: string[]; preset?: string }
+export interface Catalogo { situaciones: Situacion[]; rubros: Rubro[]; modalidades: { id: string; nombre: string }[]; regiones: string[] }
+
+export type EventoVivo = { n: number; t: number; tipo: string; [k: string]: unknown }
+export interface Vivo { ultimo: number; eventos: EventoVivo[]; motor: EstadoGeneral['motor'] }
 
 export interface EstadoGeneral {
   version: string; config: Config; resumen: Record<Estado, number>
@@ -37,6 +44,10 @@ export interface Evento { id: number; oferta: string; tipo: string; detalle: str
 export async function leer<T>(ruta: string): Promise<T> {
   const r = await fetch(ruta)
   return r.json()
+}
+
+export const sitio = (url?: string | null) => {
+  try { return url ? new URL(url).hostname.replace(/^www\./, '') : '' } catch { return '' }
 }
 
 export async function enviar(ruta: string, cuerpo: unknown): Promise<{ ok?: string; error?: string }> {

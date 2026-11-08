@@ -33,6 +33,9 @@ BASE = {
     # Qué buscar (cualquier profesión: lo define el asistente de bienvenida o Ajustes)
     "busqueda": {
         "preset": "general",             # general | tecnologia (agrega el diccionario técnico)
+        "situacion": "",                 # ver rumbo/catalogo.py: practica | primer | estudio | secundario | ...
+        "rubro": "",                     # ver rumbo/catalogo.py
+        "cargos": [],                    # cargos elegidos; de aquí salen las consultas
         "area": "",                      # ej. "contabilidad", "atención de público", "desarrollo web"
         "consultas": [],                 # lo que se escribe en el buscador de cada portal
         "palabras_clave": [],            # suman puntos si aparecen en la oferta
@@ -58,6 +61,10 @@ BASE = {
         "limite_correos_dia": 10,
         "limite_portal_dia": 10,         # postulaciones automáticas por portal y día
         "revisar_antes_de_enviar": True, # postulador: abre el navegador y espera tu clic final
+        # LinkedIn "Solicitud sencilla" (Easy Apply) con tu sesión. RIESGO ALTO: LinkedIn prohíbe las
+        # herramientas automatizadas y puede restringir o cerrar tu cuenta. Apagado por defecto; si lo
+        # activas, Rumbo busca ofertas con Solicitud sencilla y postula con topes y pausas de 30 a 90 s.
+        "linkedin_auto": False,
         "dias_seguimiento": 5,
         "correo": "",
         "nombre": "",

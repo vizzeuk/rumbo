@@ -15,7 +15,8 @@ apuntando al norte**: Rumbo encontró tu dirección.
 
 - Archivo estático: `ui/public/logo.svg` (se copia a `rumbo/web/logo.svg`).
 - Componente animado: `ui/src/Logo.tsx`.
-- Logotipo: la palabra **rumbo** en minúscula, Fraunces 650, color espresso, junto al símbolo.
+- Logotipo: la palabra **rumbo** en minúscula, en la tipografía de títulos, junto al símbolo. El logo
+  definitivo se elige en el brand kit interactivo (`/brandkit.html`, 12 conceptos nuevos + 5 de la primera ronda).
 - Espacio libre alrededor del símbolo: al menos la mitad de su radio. Tamaño mínimo: 20 px.
 
 ## Color
@@ -40,8 +41,9 @@ Regla: crema y leche dominan; el café y el caramelo aparecen en acciones y dato
 solo en etiquetas pequeñas.
 
 ## Tipografía
-- **Fraunces** (serif, licencia OFL) para títulos, números grandes y el logotipo.
-- **Inter** (sans, OFL) para toda la interfaz.
+- Provisoria en la app: **Bricolage Grotesque** (títulos y números) + **Hanken Grotesk** (interfaz), ambas OFL.
+- La definitiva se elige entre las 12 parejas del brand kit (`/brandkit.html`).
+- Regla fija: **cero degradados** en toda la interfaz. Colores planos.
 - Ambas vienen empaquetadas con la app (no dependen de internet).
 - Cifras con `font-variant-numeric: tabular-nums`.
 

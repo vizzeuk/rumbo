@@ -41,6 +41,8 @@ def existe(con, oid):
 def evento(con, oid, tipo, detalle=""):
     con.execute("INSERT INTO eventos (oferta,tipo,detalle,fecha) VALUES (?,?,?,?)",
                 (oid, tipo, detalle, time.time()))
+    from rumbo import vivo
+    vivo.desde_db(con, oid, tipo, detalle)
 
 
 def contar_eventos_hoy(con, tipo, fuente=None):

@@ -6,7 +6,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from rumbo import __version__, config, correo, db, motor
+from rumbo import __version__, catalogo, config, correo, db, motor, perfil_prompt, vivo
 from rumbo.fuentes import FUENTES
 
 WEB = Path(__file__).parent / "web"
@@ -58,7 +58,15 @@ class Manejador(BaseHTTPRequestHandler):
         self.wfile.write(cuerpo)
 
     def do_GET(self):
-        ruta = self.path.split("?")[0]
+        ruta, _, query = self.path.partition("?")
+        if ruta == "/api/vivo":
+            from urllib.parse import parse_qs
+            n = int((parse_qs(query).get("desde") or ["0"])[0] or 0)
+            return self._json({**vivo.desde(n), "motor": motor.ESTADO})
+        if ruta == "/api/catalogo":
+            return self._json(catalogo.todo())
+        if ruta == "/api/perfil/prompt":
+            return self._json({"prompt": perfil_prompt.prompt()})
         if ruta.startswith("/api/"):
             con = db.conectar()
             if ruta == "/api/estado":
@@ -133,6 +141,28 @@ class Manejador(BaseHTTPRequestHandler):
             if ruta == "/api/buscar":
                 en_hilo(motor.ciclo, True)
                 return self._json({"ok": "Búsqueda iniciada."})
+            if ruta == "/api/postular_todo":
+                en_hilo(motor.masivo, int(d.get("evaluar_hasta", 200)))
+                return self._json({"ok": "Postulando a todo lo que calce. Puedes seguir en lo tuyo."})
+            if ruta == "/api/perfil/importar":
+                r = perfil_prompt.importar(d.get("texto", ""))
+                return self._json({"ok": "Perfil listo.", **r})
+            if ruta == "/api/busqueda":
+                r = catalogo.busqueda_desde(d)
+                config.guardar({"busqueda": r["busqueda"], "fuentes": r["fuentes"]} if r["fuentes"] else {"busqueda": r["busqueda"]})
+                return self._json({"ok": "Búsqueda actualizada.", **r})
+            if ruta == "/api/cv":
+                import base64
+                nombre = Path(d.get("nombre") or "cv.pdf").name
+                if Path(nombre).suffix.lower() not in (".pdf", ".doc", ".docx"):
+                    raise ValueError("Sube tu CV en PDF o Word.")
+                destino = config.HOME / "cv" / nombre
+                destino.parent.mkdir(parents=True, exist_ok=True)
+                destino.write_bytes(base64.b64decode(d["b64"]))
+                datos = config.datos_personales()
+                datos["cv"] = str(destino)
+                config.DATOS.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+                return self._json({"ok": "CV guardado. Lo voy a adjuntar cuando un portal lo pida.", "cv": str(destino)})
             if ruta == "/api/agencias":
                 seg = d.get("segmento", "agencias")
                 en_hilo(lambda: FUENTES["agencias"].buscar(db.conectar(), int(d.get("n", 8)), seg, d.get("rubro", "")))
