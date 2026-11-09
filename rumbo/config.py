@@ -6,6 +6,8 @@ Todo lo personal vive fuera del repositorio, en la carpeta de datos:
 import json
 import os
 import shutil
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 HOME = Path(os.environ.get("RUMBO_HOME", Path.home() / ".rumbo"))
@@ -95,10 +97,27 @@ def asegurar_carpetas():
         DATOS.write_text(json.dumps(DATOS_BASE, indent=2, ensure_ascii=False))
 
 
+_temporal = threading.local()
+
+
+@contextmanager
+def busqueda_temporal(cambios):
+    """Cambia la búsqueda solo para este hilo (una búsqueda rápida), sin tocar config.json."""
+    _temporal.busqueda = cambios
+    try:
+        yield
+    finally:
+        _temporal.busqueda = None
+
+
 def cargar():
     asegurar_carpetas()
     datos = json.loads(CONFIG.read_text()) if CONFIG.exists() else {}
-    return _mezclar(BASE, datos)
+    cfg = _mezclar(BASE, datos)
+    extra = getattr(_temporal, "busqueda", None)
+    if extra:
+        cfg["busqueda"] = {**cfg["busqueda"], **extra}
+    return cfg
 
 
 def guardar(cambios):

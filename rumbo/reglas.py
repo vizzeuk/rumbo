@@ -90,6 +90,10 @@ def puntuar(titulo, descripcion, modalidad=""):
     if not claves:                       # sin palabras clave: que decida la IA
         return 40 + BONO_MODALIDAD.get(modalidad, 0) // 2, ""
     p = sum(claves[k] for k in hay(t, list(claves)))
+    # el título dice justo lo que buscaste (una consulta o uno de tus cargos): es relevante
+    frases = [x.lower().strip() for x in (b.get("consultas") or []) + (b.get("cargos") or []) if len(x.strip()) > 3]
+    if any(f in titulo.lower() for f in frases):
+        p += 25
     if p < 12 and not hay(titulo.lower(), list(claves)):
         return -1, "poco relacionado con lo que buscas"
     p += BONO_MODALIDAD.get(modalidad, 0)

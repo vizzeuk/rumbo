@@ -4,14 +4,16 @@ import { Bot, Building2, Globe, Mail, Rocket, Search, Store, Zap } from 'lucide-
 import { enviar, type Config } from '../api'
 import type { Ctx } from '../App'
 import { EASE, Fichas, RESORTE, Titulo, lista, useAviso } from '../comunes'
-import { Toggle } from '../bencho/LiquidToggle'
-import '../bencho/LiquidToggle.css'
+import SquishSwitch from '../rb/SquishSwitch'
+import JellyRadio from '../rb/JellyRadio'
+
+const SW = { trackColor: '#D6CAB6', trackOnColor: '#5B4636', thumbColor: '#FFFEFA', thumbOnColor: '#FFFEFA', width: 52, height: 30 }
 
 function Interruptor({ on, cambiar, titulo, texto }: { on: boolean; cambiar: (v: boolean) => void; titulo: ReactNode; texto?: ReactNode }) {
   return (
     <div className="interruptor">
       <div><b>{titulo}</b>{texto && <small>{texto}</small>}</div>
-      <div className="liq-chico"><Toggle checked={on} onChange={cambiar} label={typeof titulo === 'string' ? titulo : 'Interruptor'} /></div>
+      <SquishSwitch checked={on} onChange={cambiar} ariaLabel={typeof titulo === 'string' ? titulo : 'Interruptor'} {...SW} />
     </div>
   )
 }
@@ -69,8 +71,13 @@ export default function Ajustes({ estado, recargar }: Ctx) {
           <motion.section key={sec} className="hoja" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.25, ease: EASE }}>
             {sec === 'auto' && <>
               <h2>Cuánto hago solo</h2>
-              <Interruptor on={e.modo_automatico} cambiar={v => setE({ modo_automatico: v })} titulo="Piloto automático"
-                texto="Envío correos y postulo en los portales sin preguntarte, a las ofertas que calzan." />
+              <div className="nivel">
+                <JellyRadio size="md" chipColor="#EEE8DC" activeColor="#5B4636" textColor="#3A2E24" activeTextColor="#FFFEFA"
+                  items={[{ value: 'buscar', label: 'Solo buscar' }, { value: 'preparar', label: 'Dejarlo listo' }, { value: 'piloto', label: 'Piloto automático' }]}
+                  value={e.modo_automatico ? 'piloto' : e.revisar_antes_de_enviar ? 'preparar' : 'buscar'}
+                  onChange={v => setE({ modo_automatico: v === 'piloto', revisar_antes_de_enviar: v !== 'piloto' })} />
+                <p className="nota">{e.modo_automatico ? 'Envío correos y postulo solo a las que calzan, respetando los topes de abajo.' : e.revisar_antes_de_enviar ? 'Busco, leo y escribo todo. En los portales lleno el formulario y te dejo el último clic.' : 'Busco y leo cada oferta. Tú decides qué enviar.'}</p>
+              </div>
               <Interruptor on={!e.revisar_antes_de_enviar} cambiar={v => setE({ revisar_antes_de_enviar: !v })} titulo="Postular sin esperar tu clic final"
                 texto="Apagado, abro el navegador, lleno todo y te dejo el botón de enviar a ti." />
               <div className="form grid2">
@@ -93,7 +100,7 @@ export default function Ajustes({ estado, recargar }: Ctx) {
                   <motion.div key={f.clave} className="portal" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, ...RESORTE }}>
                     <div><b>{f.nombre}</b><small>{f.descripcion}</small>
                       <span className="portal-chips">{estado.portales_postulacion.includes(f.nombre) && <span className="chip ok">postula solo</span>}{f.total > 0 && <span className="chip">{f.total} encontradas</span>}</span></div>
-                    <div className="liq-chico"><Toggle checked={!!c.fuentes[f.clave]} onChange={v => fuente(f.clave, v)} label={f.nombre} /></div>
+                    <SquishSwitch checked={!!c.fuentes[f.clave]} onChange={v => fuente(f.clave, v)} ariaLabel={f.nombre} {...SW} />
                   </motion.div>
                 ))}
               </div>

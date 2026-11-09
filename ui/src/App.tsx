@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Compass, Inbox, Settings2, UserRound } from 'lucide-react'
 import StatusMark from './rb/StatusMark'
-import Logo from './Logo'
+import Logo, { Palabra } from './Logo'
 import { enviar, hace, leer, type EstadoGeneral, type Oferta } from './api'
 import { EASE, RESORTE, useAviso } from './comunes'
 import { useVivo } from './vivo'
@@ -66,8 +66,8 @@ export default function App() {
   }, [recargar])
 
   const ir = (v: Vista) => { location.hash = v; setVista(v) }
-  const buscar = async () => {
-    const r = await enviar('/api/buscar', {})
+  const buscar = async (consulta?: string) => {
+    const r = await enviar('/api/buscar', consulta ? { consulta } : {})
     if (r.error) aviso(r.error, true)
     ir('buscar'); window.setTimeout(recargar, 800)
   }
@@ -81,7 +81,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="barra">
-        <a className="marca" onClick={() => ir('buscar')}><Logo tamano={30} animado={false} /><b>rumbo</b></a>
+        <a className="marca" onClick={() => ir('buscar')} aria-label="Rumbo"><Palabra alto={30} /></a>
         <nav className="pestanas">
           {VISTAS.map(v => (
             <button key={v.id} className={vista === v.id ? 'on' : ''} onClick={() => ir(v.id)}>

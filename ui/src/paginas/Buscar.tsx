@@ -12,6 +12,7 @@ import Magnet from '../rb/Magnet'
 import { SlideConfirm } from '../bencho/SlideConfirm'
 import '../bencho/SlideConfirm.css'
 import Logo from '../Logo'
+import { BusquedaRapida, Tablero, useResumen } from './BuscarResumen'
 
 const FRASE: Record<string, string> = {
   practica: 'mi práctica', primer: 'mi primer trabajo', estudio: 'un trabajo para mientras estudio',
@@ -253,7 +254,7 @@ function Transmision({ c, abrir }: { c: Corrida; abrir: (id: string) => void }) 
 }
 
 // ---------------------------------------------------------------- pantalla
-export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: () => void }) {
+export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: (consulta?: string) => void }) {
   const { estado, ofertas, corrida: c, buscar, abrir, ir, recargar } = ctx
   const aviso = useAviso()
   const corriendo = estado.motor.corriendo || c.activa
@@ -265,6 +266,7 @@ export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: () => void
     aviso(r.error || r.ok || '', !!r.error, r.error ? undefined : estado.config.envio.revisar_antes_de_enviar ? 'Tienes activado revisar antes de enviar: el navegador te esperará en cada una.' : 'Va a su ritmo para no parecer un robot.')
   }
   const [cerrada, setCerrada] = useState(0)
+  const resumen = useResumen(`${c.fin}-${ofertas.length}`)
   const reciente = c.fin != null && Date.now() / 1000 - c.fin < 45 * 60
   const mostrarCorrida = corriendo || (reciente && cerrada !== c.inicio)
 
@@ -281,12 +283,14 @@ export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: () => void
         <Constructor estado={estado} recargar={recargar} />
         <div className="cta-buscar">
           <Magnet padding={60} magnetStrength={4}>
-            <motion.button className="btn primario enorme" onClick={buscar} whileTap={{ scale: 0.95 }}><Search size={20} strokeWidth={2.4} /> Buscar ahora</motion.button>
+            <motion.button className="btn primario enorme" onClick={() => buscar()} whileTap={{ scale: 0.95 }}><Search size={20} strokeWidth={2.4} /> Buscar ahora</motion.button>
           </Magnet>
           {listas > 0 && <button className="btn enorme sec" onClick={() => ir('postulaciones')}>{listas} esperan tu revisión</button>}
         </div>
+        <BusquedaRapida estado={estado} buscar={buscar} />
         <p className="pie-auto">{estado.config.envio.modo_automatico ? `Piloto automático encendido: busco cada ${estado.config.ciclo.horas} h${estado.motor.ultimo ? `, la última vez ${hace(estado.motor.ultimo)}` : ''}.` : `Busco cada ${estado.config.ciclo.horas} h y te dejo todo listo para que decidas.`}</p>
 
+        {resumen && <Tablero r={resumen} estado={estado} abrir={abrir} ir={ir} />}
         {recientes.length > 0 && (
           <section className="recientes">
             <h2>Lo último que encontré</h2>
@@ -310,7 +314,7 @@ export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: () => void
     <div className="corrida">
       <div className="corrida-cab">
         <div>
-          <h1>{corriendo ? (c.masivo ? 'Postulando a lo que calza' : 'Buscando para ti') : 'Listo por ahora'}</h1>
+          <h1>{corriendo ? (c.masivo ? 'Postulando a lo que calza' : c.consulta ? `Buscando “${c.consulta}”` : 'Buscando para ti') : 'Listo por ahora'}</h1>
           <p className="sub">{corriendo ? estado.motor.paso || 'Preparando…' : c.resumen || 'Terminé la vuelta.'}</p>
         </div>
         <Fases c={c} />
@@ -326,7 +330,7 @@ export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: () => void
                 {listas > 0 && <SlideConfirm width={360} label={`Desliza para postular a ${listas}`} doneLabel="En marcha" onConfirm={postularTodo} />}
                 <div className="fila-botones">
                   {listas > 0 && <button className="btn" onClick={() => ir('postulaciones')}>Revisarlas una por una</button>}
-                  <button className="btn fantasma" onClick={buscar}>Buscar de nuevo</button>
+                  <button className="btn fantasma" onClick={() => buscar()}>Buscar de nuevo</button>
                   <button className="btn fantasma" onClick={() => setCerrada(c.inicio)}>Volver al inicio</button>
                 </div>
               </motion.div>

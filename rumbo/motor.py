@@ -54,7 +54,16 @@ def buscar(con):
     return nuevas
 
 
-def ciclo(forzar=False):
+def ciclo(forzar=False, consulta=None):
+    """Una vuelta completa. Con `consulta`, es una búsqueda rápida de una sola vez: busca solo eso y
+    no cambia tu búsqueda guardada."""
+    if consulta:
+        with config.busqueda_temporal({"consultas": [consulta], "cargos": [consulta]}):
+            return _ciclo(forzar=True, consulta=consulta)
+    return _ciclo(forzar)
+
+
+def _ciclo(forzar=False, consulta=None):
     if not _candado.acquire(blocking=False):
         return "Ya hay una búsqueda en curso."
     ESTADO["corriendo"] = True
@@ -62,7 +71,7 @@ def ciclo(forzar=False):
         cfg = config.cargar()
         if not forzar and not (cfg["ciclo"]["desde"] <= datetime.now().hour < cfg["ciclo"]["hasta"]):
             return "Fuera de horario."
-        vivo.emitir("ciclo", fase="inicio")
+        vivo.emitir("ciclo", fase="inicio", consulta=consulta or "")
         con = db.conectar()
         nuevas = buscar(con)
 

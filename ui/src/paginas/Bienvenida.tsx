@@ -8,7 +8,7 @@ import BlurText from '../rb/BlurText'
 import RotatingText from '../rb/RotatingText'
 import DotGrid from '../rb/DotGrid'
 import Magnet from '../rb/Magnet'
-import Logo from '../Logo'
+import Logo, { Palabra } from '../Logo'
 
 type Datos = { nombre: string; apellido: string; email: string; experiencia: string }
 const PASOS = ['hola', 'momento', 'rubro', 'cargos', 'como', 'perfil', 'auto', 'listo'] as const
@@ -68,7 +68,7 @@ export default function Bienvenida({ alTerminar }: { alTerminar: () => void }) {
 
   return (
     <div className="ob">
-      <div className="ob-fondo"><DotGrid dotSize={3} gap={26} baseColor="#E6D5C1" activeColor="#8B5E3C" proximity={110} shockRadius={200} shockStrength={4} /></div>
+      <div className="ob-fondo"><DotGrid dotSize={3} gap={26} baseColor="#D6CAB6" activeColor="#7E9F7A" proximity={110} shockRadius={200} shockStrength={4} /></div>
       {i > 0 && (
         <div className="ob-progreso">
           {PASOS.slice(1).map((p, k) => <motion.i key={p} className={k < i ? 'on' : ''} animate={{ scaleX: k < i ? 1 : 0.4 }} transition={RESORTE} />)}
@@ -82,9 +82,7 @@ export default function Bienvenida({ alTerminar }: { alTerminar: () => void }) {
 
             {paso === 'hola' && (
               <div className="ob-hola">
-                <motion.div initial={{ scale: 0.6, rotate: -40, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 160, damping: 14 }}>
-                  <Logo tamano={104} />
-                </motion.div>
+                <Palabra alto={66} />
                 <h1 className="ob-grande"><BlurText text="Encontremos tu próximo trabajo" animateBy="words" delay={90} direction="bottom" /></h1>
                 <p className="sub ob-rota">Yo reviso
                   <span className="rota"><RotatingText texts={['Laborum', 'Computrabajo', 'Trabajando.com', 'Get on Board', 'Chiletrabajos', 'LinkedIn', 'la BNE']} rotationInterval={1500} staggerDuration={0.015} staggerFrom="last" /></span>
@@ -181,7 +179,7 @@ export default function Bienvenida({ alTerminar }: { alTerminar: () => void }) {
 
             {paso === 'listo' && (
               <div className="ob-hola">
-                <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 2.2, ease: EASE }}><Logo tamano={88} /></motion.div>
+                <Logo tamano={92} />
                 <h1 className="ob-grande"><BlurText text={d.nombre ? `Todo listo, ${d.nombre}` : 'Todo listo'} animateBy="words" delay={80} direction="bottom" /></h1>
                 <p className="sub">Voy a buscar <b>{cargos.slice(0, 3).join(', ')}</b>{cargos.length > 3 ? ` y ${cargos.length - 3} más` : ''}. Mira cómo lo hago.</p>
                 <Magnet padding={70} magnetStrength={4}>

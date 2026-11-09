@@ -67,3 +67,14 @@ Las animaciones vienen de [React Bits](https://reactbits.dev) (MIT + Commons Cla
 
 Regla: el movimiento orienta (algo entró, algo cambió), nunca distrae. Duraciones entre 0,2 y 1,2 s, con
 curva `[0.22, 1, 0.36, 1]`.
+
+## Decisiones (noviembre 2026)
+- **Logotipo: Ascenso.** La palabra "rumbo" monolínea, con el asta de la "b" que termina en una flecha hacia
+  arriba en color salvia. Va donde cabe la palabra: barra de la app, bienvenida, README (`ui/public/palabra.svg`).
+- **Ícono: Estampilla.** Sello perforado con una flecha que sale. Va en lo chico o cuadrado: favicon
+  (`ui/public/logo.svg`), ícono de app y el centro del radar.
+- **Tipografía: Gabarito** para títulos y números grandes (800, interletra -0.03em). El texto también va en
+  Gabarito mientras se elige la letra de texto definitiva en el brand kit (sección "La letra del texto").
+- **Paleta: Salvia.** Fondo #F8F5EF, superficie #FFFEFA, suave #EEE8DC, acento salvia #7E9F7A,
+  acción #5B4636, títulos #3A2E24, texto #2A231C, secundario #776A5C. Todo plano, cero degradados.
+- **Movimiento:** StatusMark, BlurText, JellyRadio, SquishSwitch, HoldButton y el logo que se dibuja al abrir.

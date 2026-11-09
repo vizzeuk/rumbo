@@ -1,5 +1,4 @@
-<p align="center"><img src="ui/public/logo.svg" width="84" alt="Rumbo"></p>
-<h1 align="center">rumbo</h1>
+<p align="center"><img src="ui/public/palabra.svg" width="220" alt="rumbo"></p>
 <p align="center"><b>Tu búsqueda de trabajo en piloto automático.</b><br>
 Busca en los portales de empleo de Chile y Latinoamérica, evalúa cada oferta con IA según tu perfil,
 redacta tus postulaciones y postula por ti. Para cualquier profesión.</p>
@@ -46,7 +45,7 @@ excepción es opcional y viene apagada: postular en LinkedIn con "Solicitud senc
 | | |
 |---|---|
 | ![Inicio: la búsqueda en una frase](docs/img/inicio.png) | ![Bienvenida por clics](docs/img/bienvenida.png) |
-| ![Fin de una búsqueda](docs/img/cierre.png) | ![Revisar una por una](docs/img/revisar.png) |
+| ![Ajustes](docs/img/ajustes.png) | ![Revisar una por una](docs/img/revisar.png) |
 | ![Postulaciones](docs/img/postulaciones.png) | ![Perfil con tu IA](docs/img/perfil.png) |
 
 ## Instalación rápida

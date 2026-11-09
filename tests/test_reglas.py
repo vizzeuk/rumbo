@@ -55,3 +55,8 @@ def test_solo_remoto():
     assert reglas.solo_remoto()
     usar(modalidades=["remoto", "presencial"])
     assert not reglas.solo_remoto()
+
+
+def test_titulo_igual_a_lo_buscado_no_se_descarta():
+    usar(preset="general", consultas=["tesorero"], cargos=["tesorero"])
+    assert reglas.puntuar("Tesorero", "Cargo en tienda de retail")[0] >= 20

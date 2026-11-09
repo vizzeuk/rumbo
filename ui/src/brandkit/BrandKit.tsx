@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import Logo, { Palabra } from '../Logo'
 import { motion } from 'motion/react'
 import BlurText from '../rb/BlurText'
 import SplitText from '../rb/SplitText'
@@ -47,9 +48,21 @@ const PALETAS = [
 /** Ids de paleta de la primera versión del brand kit, para no perder lo que ya estaba guardado. */
 const PALETA_ANTERIOR: Record<string, string> = { leche: 'lino', cortado: 'arcilla', avena: 'salvia' }
 
-type Eleccion = { logo: string; fuente: string; paleta: string; animaciones: string[] }
+type Eleccion = { logo: string; fuente: string; texto: string; paleta: string; animaciones: string[] }
+
+/** Letra de texto para acompañar a los títulos (segunda ronda: Gabarito quedó para títulos). */
+const TEXTOS = [
+  { id: 'gabarito', nombre: 'Gabarito sola', familia: "'Gabarito Variable'", nota: 'Una sola familia para todo: títulos y texto con la misma voz. Lo más coherente y simple.' },
+  { id: 'newsreader', nombre: 'Newsreader', familia: "'Newsreader Variable'", nota: 'Serif de diario, cálida y muy legible. Contrasta con Gabarito sin pelear.' },
+  { id: 'literata', nombre: 'Literata', familia: "'Literata Variable'", nota: 'La de la pareja original: serif de libro, más formal.' },
+  { id: 'onest', nombre: 'Onest', familia: "'Onest Variable'", nota: 'Sans redonda y amable, con más carácter que las típicas.' },
+  { id: 'figtree', nombre: 'Figtree', familia: "'Figtree Variable'", nota: 'Geométrica y limpia, muy clara en tamaños chicos.' },
+  { id: 'epilogue', nombre: 'Epilogue', familia: "'Epilogue Variable'", nota: 'Grotesca con un toque editorial, buena en párrafos largos.' },
+  { id: 'host', nombre: 'Host Grotesk', familia: "'Host Grotesk Variable'", nota: 'Sobria y moderna, se siente producto serio.' },
+  { id: 'geologica', nombre: 'Geologica', familia: "'Geologica Variable'", nota: 'Técnica y ordenada, con terminaciones cuadradas.' },
+]
 const GUARDADO = 'rumbo-brandkit'
-const INICIAL: Eleccion = { logo: LOGOS[0].id, fuente: FUENTES[0].id, paleta: PALETAS[0].id, animaciones: [] }
+const INICIAL: Eleccion = { logo: 'ascenso', fuente: 'gabarito', texto: 'gabarito', paleta: 'salvia', animaciones: ['StatusMark', 'BlurText', 'JellyRadio', 'SquishSwitch', 'HoldButton', 'LogoAnimado'] }
 
 function cargar(): Eleccion {
   try {
@@ -59,6 +72,7 @@ function cargar(): Eleccion {
     return {
       logo: TODOS_LOS_LOGOS.some(l => l.id === g.logo) ? (g.logo as string) : INICIAL.logo,
       fuente: FUENTES.some(f => f.id === g.fuente) ? (g.fuente as string) : INICIAL.fuente,
+      texto: TEXTOS.some(t => t.id === g.texto) ? (g.texto as string) : INICIAL.texto,
       paleta: PALETAS.some(p => p.id === paleta) ? paleta : INICIAL.paleta,
       animaciones: Array.isArray(g.animaciones) ? g.animaciones.filter((a): a is string => typeof a === 'string') : [],
     }
@@ -147,6 +161,7 @@ export default function BrandKit() {
   const [copiado, setCopiado] = useState(false)
   useEffect(() => localStorage.setItem(GUARDADO, JSON.stringify(e)), [e])
   const fuente = FUENTES.find(f => f.id === e.fuente)!
+  const texto = TEXTOS.find(t => t.id === e.texto)!
   const paleta = PALETAS.find(p => p.id === e.paleta)!
   const logo = TODOS_LOS_LOGOS.find(l => l.id === e.logo)!
   const c = paleta.c
@@ -154,19 +169,19 @@ export default function BrandKit() {
   const vars = useMemo(() => ({
     '--fondo': c.fondo, '--superficie': c.superficie, '--suave': c.suave, '--borde': c.borde, '--acento': c.acento,
     '--accion': c.accion, '--tinta': c.tinta, '--titulo': c.titulo, '--secundario': c.secundario,
-    ...varsFuente(fuente),
-  }) as CSSProperties, [c, fuente])
+    ...varsFuente(fuente), '--f-texto': texto.familia,
+  }) as CSSProperties, [c, fuente, texto])
   const elegirLogo = (id: string) => { setE(x => ({ ...x, logo: id })); setRepetir(r => r + 1) }
   const gusta = (id: string) => setE(x => ({ ...x, animaciones: x.animaciones.includes(id) ? x.animaciones.filter(a => a !== id) : [...x.animaciones, id] }))
   const g = (id: string) => e.animaciones.includes(id)
   const nombreLogo = logo.nombre + (PRIMERA_RONDA.includes(logo) ? ' (primera ronda)' : '')
-  const resumen = `Brand kit Rumbo · logo: ${nombreLogo} · tipografía: ${fuente.nombre} · paleta: ${paleta.nombre} · animaciones que me gustan: ${e.animaciones.join(', ') || 'ninguna todavía'}`
+  const resumen = `Brand kit Rumbo · logo: ${nombreLogo} · tipografía: ${fuente.nombre} · texto: ${texto.nombre} · paleta: ${paleta.nombre} · animaciones que me gustan: ${e.animaciones.join(', ') || 'ninguna todavía'}`
 
   return (
     <div className="bk" style={vars}>
       <nav className="bk-nav">
         <div className="bk-marca"><logo.Icono c={cLogo} tamano={30} /><span>rumbo</span><small>brand kit</small></div>
-        <div className="bk-enlaces">{['logo', 'tipografia', 'color', 'movimiento', 'componentes', 'resumen'].map(s => <a key={s} href={'#' + s}>{s === 'tipografia' ? 'tipografía' : s}</a>)}</div>
+        <div className="bk-enlaces">{['logo', 'tipografia', 'texto', 'color', 'movimiento', 'componentes', 'resumen'].map(s => <a key={s} href={'#' + s}>{s === 'tipografia' ? 'tipografía' : s}</a>)}</div>
       </nav>
 
       <header className="bk-hero">
@@ -189,6 +204,19 @@ export default function BrandKit() {
           el ícono de app, el favicon a 32 y 16 px, la versión sobre fondo oscuro y el logo junto al nombre con la tipografía que elegiste.</p>
         <div className="bk-grilla tres">
           {LOGOS.map(l => <TarjetaLogo key={l.id} l={l} c={c} elegido={e.logo === l.id} repetir={repetir} onElegir={() => elegirLogo(l.id)} />)}
+        </div>
+        <h3 className="bk-sub">Combinación elegida: logotipo Ascenso + ícono Estampilla</h3>
+        <p className="bk-nota">El logotipo va donde hay espacio para la palabra (la barra de la app, la bienvenida, el README). La estampilla
+          va donde todo es chico o cuadrado: favicon, ícono de la app y el centro del radar. El asta de la "b" quedó entera y solo la
+          punta va en color, para que no se lea como dos letras.</p>
+        <div className="bk-combo" key={'combo' + repetir}>
+          <div className="bk-combo-barra"><Palabra alto={30} /><span className="bk-combo-pestanas"><b>Buscar</b><span>Postulaciones</span><span>Perfil</span></span></div>
+          <div className="bk-combo-fila">
+            <div className="bk-combo-pieza"><Palabra alto={70} /><small>Logotipo</small></div>
+            <div className="bk-combo-pieza"><span className="bk-combo-app"><Logo tamano={74} fondo="var(--suave)" /></span><small>Ícono de app</small></div>
+            <div className="bk-combo-pieza"><span className="bk-combo-tab"><Logo tamano={16} animado={false} fondo="var(--superficie)" /> Rumbo · 8 para enviar</span><small>Favicon</small></div>
+            <div className="bk-combo-pieza oscuro"><Palabra alto={40} tinta="var(--fondo)" /><small>Sobre oscuro</small></div>
+          </div>
         </div>
         <h3 className="bk-sub">Primera ronda</h3>
         <p className="bk-nota">Las cinco ideas anteriores, más simples. Siguen disponibles por si alguna te sigue gustando más.</p>
@@ -215,6 +243,26 @@ export default function BrandKit() {
           {FUENTES.map(f => (
             <Opcion key={f.id} elegida={e.fuente === f.id} onElegir={() => setE(x => ({ ...x, fuente: f.id }))}>
               <MuestraTipo f={f} />
+            </Opcion>
+          ))}
+        </div>
+      </section>
+
+      <section id="texto" className="bk-sec">
+        <h2>2b · La letra del texto</h2>
+        <p className="bk-nota">Gabarito quedó para títulos y números grandes. Elige con qué letra van los párrafos, las listas y los
+          botones. Cada muestra usa tu título en Gabarito y un texto real de la app.</p>
+        <div className="bk-grilla dos">
+          {TEXTOS.map(t => (
+            <Opcion key={t.id} elegida={e.texto === t.id} onElegir={() => setE(x => ({ ...x, texto: t.id }))}>
+              <div className="bk-texto" style={{ '--f-texto': t.familia } as CSSProperties}>
+                <h3 className="bk-texto-titulo">Asistente contable · 90 de calce</h3>
+                <p>Calza contigo: es remoto, part time desde las 14:00 y piden conciliaciones bancarias y Excel, que es justo lo
+                  que hiciste en tus últimos dos trabajos. No piden inglés.</p>
+                <div className="bk-texto-ui"><span>Postular en Laborum</span><span>Por calce</span><span>Hace 2 h</span></div>
+                <small>{t.nombre}{t.id === 'gabarito' ? ' · recomendada' : ''}</small>
+                <p className="bk-nota">{t.nota}</p>
+              </div>
             </Opcion>
           ))}
         </div>

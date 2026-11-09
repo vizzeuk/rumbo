@@ -10,13 +10,13 @@ export type Item = {
   postulada?: boolean; correo?: boolean; t: number
 }
 export type Corrida = {
-  activa: boolean; masivo: boolean; inicio: number; fin: number | null; fase: FaseId | null; fasesHechas: FaseId[]
+  activa: boolean; masivo: boolean; consulta: string; inicio: number; fin: number | null; fase: FaseId | null; fasesHechas: FaseId[]
   fuentes: FuenteVivo[]; items: Item[]; revisadas: number; guardadas: number; descartadas: number
   evaluadas: number; porEvaluar: number; listas: number; postuladas: number; correos: number; resumen: string
 }
 
 const vacia = (): Corrida => ({
-  activa: false, masivo: false, inicio: 0, fin: null, fase: null, fasesHechas: [], fuentes: [], items: [],
+  activa: false, masivo: false, consulta: '', inicio: 0, fin: null, fase: null, fasesHechas: [], fuentes: [], items: [],
   revisadas: 0, guardadas: 0, descartadas: 0, evaluadas: 0, porEvaluar: 0, listas: 0, postuladas: 0, correos: 0, resumen: '',
 })
 
@@ -25,7 +25,7 @@ const s = (v: unknown) => (typeof v === 'string' ? v : '')
 function aplicar(c: Corrida, e: EventoVivo): Corrida {
   switch (e.tipo) {
     case 'ciclo':
-      if (e.fase === 'inicio') return { ...vacia(), activa: true, masivo: !!e.masivo, inicio: e.t }
+      if (e.fase === 'inicio') return { ...vacia(), activa: true, masivo: !!e.masivo, consulta: s(e.consulta), inicio: e.t }
       return { ...c, activa: false, fin: e.t, fase: null, fasesHechas: c.fase ? [...c.fasesHechas, c.fase] : c.fasesHechas, resumen: s(e.resumen) }
     case 'fase': {
       const hechas = c.fase && c.fase !== e.fase ? [...c.fasesHechas, c.fase] : c.fasesHechas

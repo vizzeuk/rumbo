@@ -158,3 +158,25 @@ body { margin: 0; }
 /* BlurText y SplitText envuelven el texto en <p>: que herede el tamaño del título */
 .bk h1 p, .bk h3 p, .bk-grande p, .bk-grande h3 { font: inherit; margin: 0; color: inherit; }
 .bk-hero h1 p { justify-content: center; text-align: center; }
+
+/* segunda ronda: letra del texto y combinación de logos */
+.bk-texto p { font-family: var(--f-texto); }
+.bk-texto-titulo { font-family: var(--f-titulo); font-weight: 800; font-size: 22px; letter-spacing: -.03em; color: var(--titulo); }
+.bk-texto > p:first-of-type { font-size: 15.5px; line-height: 1.6; color: var(--tinta); margin: 8px 0 12px; }
+.bk-texto-ui { display: flex; gap: 8px; flex-wrap: wrap; font-family: var(--f-texto); }
+.bk-texto-ui span { background: var(--suave); border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; color: var(--tinta); }
+.bk-texto > small { display: block; margin-top: 14px; font-weight: 700; color: var(--accion); }
+.bk-combo { background: var(--superficie); border: 1.5px solid var(--borde); border-radius: 22px; overflow: hidden; margin-bottom: 30px; }
+.bk-combo-barra { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--borde); background: var(--fondo); }
+.bk-combo-pestanas { display: flex; gap: 4px; background: var(--suave); padding: 4px; border-radius: 99px; font-size: 13px; }
+.bk-combo-pestanas > * { padding: 6px 14px; border-radius: 99px; color: var(--secundario); }
+.bk-combo-pestanas b { background: var(--superficie); color: var(--titulo); }
+.bk-combo-fila { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr 1fr; gap: 0; }
+.bk-combo-pieza { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 30px 18px; border-right: 1px solid var(--borde); min-height: 190px; }
+.bk-combo-pieza:last-child { border-right: 0; }
+.bk-combo-pieza small { color: var(--secundario); font-size: 12.5px; font-weight: 600; }
+.bk-combo-pieza.oscuro { background: var(--titulo); }
+.bk-combo-pieza.oscuro small { color: var(--suave); }
+.bk-combo-app { width: 104px; height: 104px; border-radius: 26px; background: var(--suave); display: grid; place-items: center; }
+.bk-combo-tab { display: inline-flex; align-items: center; gap: 8px; background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px 10px 0 0; padding: 8px 14px; font-size: 12.5px; color: var(--tinta); }
+@media (max-width: 1100px) { .bk-combo-fila { grid-template-columns: 1fr 1fr; } }

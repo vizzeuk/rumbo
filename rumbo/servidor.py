@@ -46,6 +46,35 @@ def _estado_general(con):
     }
 
 
+def _resumen(con):
+    """Lo que alimenta la pantalla Buscar: la semana día a día, lo que necesita atención y la actividad."""
+    hoy = time.mktime(time.localtime()[:3] + (0, 0, 0, 0, 0, -1))
+    dias = []
+    for k in range(6, -1, -1):
+        ini, fin = hoy - k * 86400, hoy - (k - 1) * 86400
+        uno = lambda sql: con.execute(sql, (ini, fin)).fetchone()[0]  # noqa: E731
+        dias.append({
+            "dia": time.strftime("%a", time.localtime(ini)), "inicio": ini,
+            "encontradas": uno("SELECT COUNT(*) FROM ofertas WHERE estado!='descartada' AND encontrada>=? AND encontrada<?"),
+            "enviadas": uno("SELECT COUNT(*) FROM eventos WHERE tipo IN ('correo','postulacion') AND fecha>=? AND fecha<?"),
+            "respuestas": uno("SELECT COUNT(*) FROM eventos WHERE tipo='respuesta' AND fecha>=? AND fecha<?"),
+        })
+    atencion = [dict(r) for r in con.execute("""SELECT id, titulo, empresa, fuente, error FROM ofertas
+        WHERE error IS NOT NULL AND error!='' AND estado IN ('lista','nueva') ORDER BY encontrada DESC LIMIT 6""")]
+    respondieron = [dict(r) for r in con.execute("""SELECT id, titulo, empresa, fuente, respuesta FROM ofertas
+        WHERE estado IN ('respondio','entrevista') ORDER BY respuesta DESC LIMIT 5""")]
+    actividad = [dict(r) for r in con.execute("""SELECT e.tipo, e.detalle, e.fecha, o.id, o.titulo, o.empresa, o.fuente
+        FROM eventos e LEFT JOIN ofertas o ON o.id=e.oferta WHERE e.tipo IN ('correo','postulacion','respuesta',
+        'seguimiento','rebote') ORDER BY e.fecha DESC LIMIT 8""")]
+    portales = [{"fuente": r[0], "total": r[1], "listas": r[2]} for r in con.execute("""SELECT fuente, COUNT(*),
+        SUM(estado='lista') FROM ofertas WHERE encontrada>=? AND estado!='descartada' GROUP BY fuente
+        ORDER BY 2 DESC LIMIT 8""", (hoy - 6 * 86400,))]
+    cfg = config.cargar()
+    ultimo = motor.ESTADO.get("ultimo")
+    return {"dias": dias, "atencion": atencion, "respondieron": respondieron, "actividad": actividad,
+            "portales": portales, "proxima": (ultimo + cfg["ciclo"]["horas"] * 3600) if ultimo else None}
+
+
 class Manejador(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -81,6 +110,8 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(filas)
             if ruta == "/api/perfil":
                 return self._json({"perfil": config.perfil(), "datos": config.datos_personales()})
+            if ruta == "/api/resumen":
+                return self._json(_resumen(con))
             if ruta == "/api/log":
                 lineas = config.LOG.read_text(encoding="utf-8").splitlines()[-80:] if config.LOG.exists() else []
                 return self._json(lineas)
@@ -139,7 +170,7 @@ class Manejador(BaseHTTPRequestHandler):
                 en_hilo(lambda: motor.evaluar(db.conectar(), oid))
                 return self._json({"ok": "Agregada. La IA la está evaluando."})
             if ruta == "/api/buscar":
-                en_hilo(motor.ciclo, True)
+                en_hilo(motor.ciclo, True, (d.get("consulta") or "").strip()[:80] or None)
                 return self._json({"ok": "Búsqueda iniciada."})
             if ruta == "/api/postular_todo":
                 en_hilo(motor.masivo, int(d.get("evaluar_hasta", 200)))

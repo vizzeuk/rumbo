@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from 'motion/react'
-import { Check, Inbox, Layers, List, Mail, RotateCcw, Send, X } from 'lucide-react'
+import { ArrowUpRight, Check, Inbox, Layers, List, Mail, Maximize2, RotateCcw, Send, Trash2, X } from 'lucide-react'
+import HoldButton from '../rb/HoldButton'
 import { enviar, hace, type Oferta } from '../api'
 import type { Ctx } from '../App'
 import { Anillo, Canal, EASE, EnSitio, RESORTE, Titulo, useAviso } from '../comunes'
@@ -85,24 +86,72 @@ function Mazo({ ofertas, estado, recargar, abrir }: Pick<Ctx, 'estado' | 'recarg
   )
 }
 
+// ---------------------------------------------------------------- vista previa al lado de la lista
+function Vista({ o, estado, recargar, abrir }: { o: Oferta } & Pick<Ctx, 'estado' | 'recargar' | 'abrir'>) {
+  const aviso = useAviso()
+  const accion = async (a: string) => { const r = await enviar('/api/oferta', { id: o.id, accion: a }); aviso(r.error || r.ok || '', !!r.error); recargar() }
+  const portal = estado.portales_postulacion.includes(o.fuente) && o.tipo !== 'solo_ver'
+  const pendiente = o.estado === 'lista' || o.estado === 'nueva'
+  return (
+    <motion.aside key={o.id} className="vista" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, ease: EASE }}>
+      <div className="vista-cab">
+        <Anillo valor={o.fit} tamano={52} />
+        <div><h2>{o.titulo}</h2><p>{o.empresa && <>{o.empresa} · </>}<EnSitio url={o.url} fuente={o.fuente} /></p></div>
+      </div>
+      <div className="chips">{o.modalidad && <span className="chip">{o.modalidad}</span>}{o.ubicacion && <span className="chip">{o.ubicacion}</span>}{o.presupuesto && <span className="chip">{o.presupuesto}</span>}<Canal o={o} portales={estado.portales_postulacion} /></div>
+      {o.motivo ? <p className="vista-motivo"><b>{(o.fit ?? 0) >= 60 ? 'Por qué calza: ' : 'Por qué no tanto: '}</b>{o.motivo}</p>
+        : <p className="vista-motivo">Todavía no la leo. <button className="btn chico" onClick={() => accion('evaluar')}>Leer y redactar</button></p>}
+      {o.error && <p className="aviso mal">{o.error}</p>}
+      {o.propuesta && <div className="vista-texto"><small>{o.enviada ? 'Lo que envié' : 'Lo que voy a enviar'}{o.asunto ? `: ${o.asunto}` : ''}</small><p>{o.propuesta}</p></div>}
+      <div className="vista-acciones">
+        {pendiente && o.propuesta && (o.email ? <button className="btn primario" onClick={() => accion('enviar_correo')}><Send size={15} /> Enviar correo</button>
+          : portal ? <button className="btn primario" onClick={() => accion('postular')}><Send size={15} /> Postular en {o.fuente}</button>
+            : <a className="btn primario" href={o.url} target="_blank" rel="noreferrer" onClick={() => navigator.clipboard.writeText(o.propuesta)}>Copiar y abrir <ArrowUpRight size={15} /></a>)}
+        <button className="btn" onClick={() => abrir(o.id)}><Maximize2 size={15} /> Abrir y editar</button>
+        {pendiente && <button className="btn fantasma" onClick={() => accion('descartada')}><Trash2 size={15} /> Descartar</button>}
+      </div>
+    </motion.aside>
+  )
+}
+
+const GRUPOS = (t: number) => {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const d = (hoy.getTime() / 1000 - t) / 86400
+  return t >= hoy.getTime() / 1000 ? 'Hoy' : d < 1 ? 'Ayer' : d < 7 ? 'Esta semana' : 'Antes'
+}
+
 // ---------------------------------------------------------------- pantalla
 export default function Postulaciones(ctx: Ctx) {
-  const { ofertas, estado, abrir } = ctx
+  const { ofertas, estado, abrir, recargar } = ctx
+  const aviso = useAviso()
   const [filtro, setFiltro] = useState<FiltroId>('lista')
   const [modo, setModo] = useState<'mazo' | 'lista'>('lista')
+  const [orden, setOrden] = useState<'calce' | 'fecha'>('calce')
   const [q, setQ] = useState('')
+  const [sel, setSel] = useState<string | null>(null)
   const cuenta = useMemo(() => Object.fromEntries(FILTROS.map(f => [f.id, ofertas.filter(f.f).length])), [ofertas])
-  const filas = ofertas.filter(FILTROS.find(f => f.id === filtro)!.f).filter(o => !q || `${o.titulo} ${o.empresa} ${o.fuente}`.toLowerCase().includes(q.toLowerCase()))
+  const fecha = (o: Oferta) => o.respuesta || o.enviada || o.encontrada || 0
+  const filas = ofertas.filter(FILTROS.find(f => f.id === filtro)!.f)
+    .filter(o => !q || `${o.titulo} ${o.empresa} ${o.fuente}`.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => orden === 'calce' ? (b.fit ?? -1) - (a.fit ?? -1) || fecha(b) - fecha(a) : fecha(b) - fecha(a))
+    .slice(0, 300)
+  const grupos = orden === 'fecha'
+    ? filas.reduce<[string, Oferta[]][]>((acc, o) => { const g = GRUPOS(fecha(o)); const u = acc[acc.length - 1]; if (u && u[0] === g) u[1].push(o); else acc.push([g, [o]]); return acc }, [])
+    : [['', filas] as [string, Oferta[]]]
+  const elegida = filas.find(o => o.id === sel) || filas[0]
+  const enviadas = estado.resumen.enviada + estado.resumen.respondio + estado.resumen.entrevista
+  const tasa = enviadas ? Math.round(((estado.resumen.respondio + estado.resumen.entrevista) / enviadas) * 100) : 0
+  const postularTodo = async () => { const r = await enviar('/api/postular_todo', {}); aviso(r.error || r.ok || '', !!r.error) }
 
   return (
     <div className="postulaciones">
       <header className="cab">
-        <Titulo texto="Tus postulaciones" sub="Todo lo que encontré, lo que envié y quién respondió." />
+        <Titulo texto="Tus postulaciones" sub={<>{enviadas} enviadas · {estado.resumen.respondio + estado.resumen.entrevista} respondieron{enviadas ? ` (${tasa}%)` : ''} · {estado.resumen.lista} esperan tu revisión</>} />
         <div className="seg">
           {(['lista', 'mazo'] as const).map(m => (
             <button key={m} className={modo === m ? 'on' : ''} onClick={() => setModo(m)}>
               {modo === m && <motion.span layoutId="seg-modo" className="seg-fondo" transition={RESORTE} />}
-              {m === 'lista' ? <><List size={16} /> Lista</> : <><Layers size={16} /> Revisar una por una</>}
+              {m === 'lista' ? <><List size={16} /><span>Lista</span></> : <><Layers size={16} /><span>Revisar una por una</span></>}
             </button>
           ))}
         </div>
@@ -113,31 +162,52 @@ export default function Postulaciones(ctx: Ctx) {
         : <>
           <div className="filtros">
             {FILTROS.map(f => (
-              <button key={f.id} className={filtro === f.id ? 'on' : ''} onClick={() => setFiltro(f.id)}>
+              <button key={f.id} className={filtro === f.id ? 'on' : ''} onClick={() => { setFiltro(f.id); setSel(null) }}>
                 {filtro === f.id && <motion.span layoutId="filtro-fondo" className="filtro-fondo" transition={RESORTE} />}
                 <span>{f.nombre}</span><b>{cuenta[f.id]}</b>
               </button>
             ))}
-            <input className="buscar-lista" placeholder="Filtrar por cargo, empresa o portal" value={q} onChange={e => setQ(e.target.value)} />
           </div>
-          <div className="lista-post">
-            <AnimatePresence initial={false} mode="popLayout">
-              {filas.slice(0, 200).map((o, i) => (
-                <motion.div key={o.id} layout className="post-fila" onClick={() => abrir(o.id)}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.35, ease: EASE }}>
-                  <Anillo valor={o.fit} tamano={40} />
-                  <div className="vivo-txt">
-                    <b>{o.titulo}</b>
-                    <span>{o.empresa && <>{o.empresa} · </>}<EnSitio url={o.url} fuente={o.fuente} /></span>
-                    {o.error && <small className="mal">{o.error}</small>}
-                  </div>
-                  <Canal o={o} portales={estado.portales_postulacion} />
-                  <small className="cuando">{o.respuesta ? `respondió ${hace(o.respuesta)}` : o.enviada ? `enviada ${hace(o.enviada)}` : hace(o.encontrada)}</small>
-                </motion.div>
+          <div className="barra-lista">
+            <input className="buscar-lista" placeholder="Filtrar por cargo, empresa o portal" value={q} onChange={e => setQ(e.target.value)} />
+            <div className="seg chico">
+              {(['calce', 'fecha'] as const).map(k => (
+                <button key={k} className={orden === k ? 'on' : ''} onClick={() => setOrden(k)}>
+                  {orden === k && <motion.span layoutId="seg-orden" className="seg-fondo" transition={RESORTE} />}<span>{k === 'calce' ? 'Por calce' : 'Por fecha'}</span>
+                </button>
               ))}
-            </AnimatePresence>
-            {!filas.length && <div className="vacio"><Inbox size={28} /><p>Nada en esta lista todavía.</p></div>}
+            </div>
+            {filtro === 'lista' && cuenta.lista > 0 && (
+              <HoldButton backgroundColor="#EEE8DC" fillColor="#5B4636" textColor="#3A2E24" fillTextColor="#FFFEFA" glow={false} size="sm" holdTime={1.2}
+                doneLabel="En marcha" onHold={postularTodo}>Mantén para enviar las {cuenta.lista}</HoldButton>
+            )}
+          </div>
+          <div className="lista-y-vista">
+            <div className="tabla">
+              <div className="tabla-cab"><span>Calce</span><span>Cargo y empresa</span><span>Cómo se envía</span><span>Cuándo</span></div>
+              {grupos.map(([g, os]) => (
+                <div key={g || 'todo'}>
+                  {g && <div className="grupo">{g}<small>{os.length}</small></div>}
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {os.map((o, i) => (
+                      <motion.div key={o.id} layout className={'post-fila' + (elegida?.id === o.id ? ' sel' : '')} onClick={() => setSel(o.id)} onDoubleClick={() => abrir(o.id)}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ delay: Math.min(i * 0.015, 0.25), duration: 0.3, ease: EASE }}>
+                        <Anillo valor={o.fit} tamano={38} />
+                        <div className="vivo-txt">
+                          <b>{o.titulo}</b>
+                          <span>{o.empresa || 'Empresa sin nombre'} · <EnSitio url={o.url} fuente={o.fuente} /></span>
+                        </div>
+                        <Canal o={o} portales={estado.portales_postulacion} />
+                        <small className="cuando">{o.respuesta ? `respondió ${hace(o.respuesta)}` : o.enviada ? `enviada ${hace(o.enviada)}` : hace(o.encontrada)}</small>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              ))}
+              {!filas.length && <div className="vacio"><Inbox size={28} /><p>Nada en esta lista todavía.</p></div>}
+            </div>
+            <AnimatePresence mode="wait">{elegida && <Vista key={elegida.id} o={elegida} estado={estado} recargar={recargar} abrir={abrir} />}</AnimatePresence>
           </div>
         </>}
     </div>
