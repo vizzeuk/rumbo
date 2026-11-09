@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Bot, Building2, Globe, Mail, Rocket, Search, Store, Zap } from 'lucide-react'
-import { enviar, type Config } from '../api'
+import { enviar, hace as haceApi, type Config } from '../api'
 import type { Ctx } from '../App'
-import { EASE, Fichas, RESORTE, Titulo, lista, useAviso } from '../comunes'
+import { EASE, Fichas, Info, RESORTE, Titulo, lista, useAviso } from '../comunes'
+import ConectarIA from './ConectarIA'
 import SquishSwitch from '../rb/SquishSwitch'
 import JellyRadio from '../rb/JellyRadio'
 
@@ -36,7 +37,11 @@ const SEGMENTOS = [
 
 export default function Ajustes({ estado, recargar }: Ctx) {
   const aviso = useAviso()
-  const [sec, setSec] = useState<Sec>('auto')
+  const [sec, setSec] = useState<Sec>(() => {
+    const pedido = sessionStorage.getItem('rumbo-ajustes') as Sec | null
+    sessionStorage.removeItem('rumbo-ajustes')
+    return pedido && SECCIONES.some(x => x.id === pedido) ? pedido : 'auto'
+  })
   const [c, setC] = useState<Config>(structuredClone(estado.config))
   const [correo, setCorreo] = useState({ cuenta: estado.correo_cuenta || '', clave: '' })
   const [rubro, setRubro] = useState('')
@@ -53,6 +58,8 @@ export default function Ajustes({ estado, recargar }: Ctx) {
     setC({ ...c, fuentes }); await enviar('/api/config', { fuentes }); recargar()
   }
   const conectar = async () => { const r = await enviar('/api/correo', correo); aviso(r.error || 'Correo conectado', !!r.error, r.error ? undefined : 'Ya puedo escribir desde tu cuenta.'); recargar() }
+  const login = async (portal: string) => { const r = await enviar('/api/portal/login', { portal }); aviso(r.error || `Abrí ${portal}`, !!r.error, r.error ? undefined : 'Inicia sesión y cierra esa ventana cuando termines. Te aviso si quedó lista.') }
+  const desbloquear = async (empresa: string) => { await enviar('/api/empresa/desbloquear', { empresa }); setB({ empresas_bloqueadas: (b.empresas_bloqueadas || []).filter(x => x !== empresa) }); recargar() }
   const prospectar = async (segmento: string) => { const r = await enviar('/api/agencias', { segmento, rubro, n: 10 }); aviso(r.error || r.ok || '', !!r.error, 'Las verás en Postulaciones → Empresas por correo.') }
 
   return (
@@ -99,7 +106,10 @@ export default function Ajustes({ estado, recargar }: Ctx) {
                 {estado.fuentes.map((f, i) => (
                   <motion.div key={f.clave} className="portal" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, ...RESORTE }}>
                     <div><b>{f.nombre}</b><small>{f.descripcion}</small>
-                      <span className="portal-chips">{estado.portales_postulacion.includes(f.nombre) && <span className="chip ok">postula solo</span>}{f.total > 0 && <span className="chip">{f.total} encontradas</span>}</span></div>
+                      <span className="portal-chips">{estado.portales_postulacion.includes(f.nombre) && <span className="chip ok">postula solo</span>}{f.total > 0 && <span className="chip">{f.total} encontradas</span>}
+                        {estado.portales_postulacion.includes(f.nombre) && (estado.sesiones[f.nombre]
+                          ? <button className="chip boton" onClick={() => login(f.nombre)}>sesión iniciada {haceApi(estado.sesiones[f.nombre])}</button>
+                          : <button className="chip boton fuerte" onClick={() => login(f.nombre)}>Iniciar sesión para postular</button>)}</span></div>
                     <SquishSwitch checked={!!c.fuentes[f.clave]} onChange={v => fuente(f.clave, v)} ariaLabel={f.nombre} {...SW} />
                   </motion.div>
                 ))}
@@ -118,6 +128,8 @@ export default function Ajustes({ estado, recargar }: Ctx) {
                 <Fichas multiple opciones={[{ id: 'full time', nombre: 'Jornada completa' }, { id: 'part time', nombre: 'Part time' }, { id: 'por proyecto', nombre: 'Por proyecto' }, { id: 'práctica', nombre: 'Práctica' }]}
                   valor={b.jornadas} cambiar={v => setB({ jornadas: v })} />
               </div>
+              {(b.empresas_bloqueadas || []).length > 0 && <div className="form"><label>Empresas que no quieres ver</label>
+                <div className="chips">{(b.empresas_bloqueadas || []).map(x => <button key={x} className="chip boton" onClick={() => desbloquear(x)} title="Volver a mostrar">{x} ✕</button>)}</div></div>}
               <Interruptor on={b.excluir_ingles} cambiar={v => setB({ excluir_ingles: v })} titulo="Saltar ofertas que piden inglés" />
               <Interruptor on={b.preset === 'tecnologia'} cambiar={v => setB({ preset: v ? 'tecnologia' : 'general' })} titulo="Soy de tecnología" texto="Suma un diccionario técnico para puntuar mejor." />
               <button className="btn primario" onClick={() => guardar()}>Guardar</button>
@@ -138,10 +150,15 @@ export default function Ajustes({ estado, recargar }: Ctx) {
 
             {sec === 'correo' && <>
               <h2>Tu correo</h2>
-              <p className="nota">{estado.correo_conectado ? `Conectado: ${estado.correo_cuenta}. Hoy van ${estado.correos_hoy} correos.` : 'Necesitas una contraseña de aplicación (en Gmail: myaccount.google.com/apppasswords), no tu contraseña normal. Queda guardada en el llavero de tu computador.'}</p>
+              <p className="nota">{estado.correo_conectado ? `Conectado: ${estado.correo_cuenta}. Hoy van ${estado.correos_hoy} correos.` : 'Conecta tu correo para que pueda escribir a empresas y avisarte cuando te respondan.'}</p>
               <div className="form">
                 <label>Cuenta</label><input value={correo.cuenta} onChange={x => setCorreo({ ...correo, cuenta: x.target.value })} />
-                <label>Contraseña de aplicación</label><input type="password" value={correo.clave} onChange={x => setCorreo({ ...correo, clave: x.target.value })} />
+                <label>Contraseña de aplicación <Info titulo="Cómo crear tu contraseña de aplicación" enlace={/outlook|hotmail|live/i.test(correo.cuenta) ? 'https://account.microsoft.com/security' : 'https://myaccount.google.com/apppasswords'} textoEnlace={/outlook|hotmail|live/i.test(correo.cuenta) ? 'Abrir seguridad de Microsoft' : 'Abrir contraseñas de Google'}
+                  pasos={/outlook|hotmail|live/i.test(correo.cuenta)
+                    ? ['Entra a account.microsoft.com/security y activa la verificación en dos pasos.', 'En "Opciones de seguridad avanzadas", busca "Contraseñas de aplicación" y crea una.', 'Copia la contraseña y pégala aquí.']
+                    : ['Activa la verificación en 2 pasos de tu cuenta de Google (si no la tienes).', 'Entra a myaccount.google.com/apppasswords.', 'Escribe "Rumbo" como nombre y toca Crear.', 'Copia las 16 letras que aparecen y pégalas aquí. Los espacios no importan.']} /></label>
+                <input type="password" placeholder="16 letras, por ejemplo abcd efgh ijkl mnop" value={correo.clave} onChange={x => setCorreo({ ...correo, clave: x.target.value })} />
+                <p className="nota">No es tu contraseña normal: es una clave aparte que puedes borrar cuando quieras. Queda guardada en el llavero de tu computador.</p>
                 <label>Nombre con el que firmas</label><input value={e.nombre} onChange={x => setE({ nombre: x.target.value })} onBlur={() => guardar({ envio: { ...e } } as Partial<Config>)} />
               </div>
               <button className="btn primario" onClick={conectar}>Conectar correo</button>
@@ -149,17 +166,8 @@ export default function Ajustes({ estado, recargar }: Ctx) {
 
             {sec === 'ia' && <>
               <h2>Inteligencia artificial</h2>
-              <div className="form">
-                <label>Con qué leo y escribo</label>
-                <Fichas opciones={[{ id: 'claude-cli', nombre: 'Claude Code', detalle: 'con tu sesión, sin API key' }, { id: 'anthropic', nombre: 'API de Anthropic' }, { id: 'openai', nombre: 'Compatible con OpenAI' }, { id: 'ollama', nombre: 'Ollama', detalle: 'gratis en tu PC' }]}
-                  valor={[c.ia.proveedor]} cambiar={([v]) => setI({ proveedor: v })} />
-                <div className="grid2">
-                  <div><label>Modelo</label><input value={c.ia.modelo} onChange={x => setI({ modelo: x.target.value })} /></div>
-                  <div><label>Variable con la API key</label><input value={c.ia.variable_clave} onChange={x => setI({ variable_clave: x.target.value })} placeholder="ANTHROPIC_API_KEY" /></div>
-                </div>
-                <label>URL base (OpenAI compatible u Ollama)</label><input value={c.ia.base_url} onChange={x => setI({ base_url: x.target.value })} placeholder="http://localhost:11434/v1" />
-              </div>
-              <button className="btn primario" onClick={() => guardar()}>Guardar</button>
+              <p className="nota">La IA lee cada oferta, la compara con tu perfil y escribe tus postulaciones. Elige con cuál trabajo: hay opciones gratis.</p>
+              <ConectarIA alConectar={recargar} />
             </>}
           </motion.section>
         </AnimatePresence>

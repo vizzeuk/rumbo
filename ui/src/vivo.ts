@@ -62,12 +62,15 @@ function aplicar(c: Corrida, e: EventoVivo): Corrida {
   }
 }
 
-export function useVivo(alCambiar?: () => void) {
+export function useVivo(alCambiar?: () => void, alEvento?: (e: EventoVivo) => void) {
   const [corrida, setCorrida] = useState<Corrida>(vacia)
   const [motor, setMotor] = useState<Vivo['motor'] | null>(null)
   const ultimo = useRef(0)
   const aviso = useRef(alCambiar)
   aviso.current = alCambiar
+  const evento = useRef(alEvento)
+  evento.current = alEvento
+  const primera = useRef(true)
 
   useEffect(() => {
     let vivo = true
@@ -81,8 +84,10 @@ export function useVivo(alCambiar?: () => void) {
         if (r.eventos.length) {
           ultimo.current = r.ultimo
           setCorrida(c => r.eventos.reduce(aplicar, c))
-          if (r.eventos.some(e => ['ciclo', 'evaluada', 'postulada', 'correo'].includes(e.tipo))) aviso.current?.()
+          if (r.eventos.some(e => ['ciclo', 'evaluada', 'postulada', 'correo', 'sesion'].includes(e.tipo))) aviso.current?.()
+          if (!primera.current) r.eventos.forEach(e => evento.current?.(e))
         }
+        primera.current = false
         setMotor(r.motor)
         t = window.setTimeout(tick, r.motor.corriendo ? 700 : 2500)
       } catch {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertCircle, ArrowRight, Clock, MailCheck, Search, Send, Sparkles } from 'lucide-react'
+import { AlertCircle, ArrowRight, Check, Clock, MailCheck, Search, Send, Sparkles } from 'lucide-react'
 import { hace, leer, type Catalogo } from '../api'
 import type { Ctx } from '../App'
 import { EASE, RESORTE } from '../comunes'
@@ -124,5 +124,34 @@ export function Tablero({ r, estado, abrir, ir }: { r: Resumen } & Pick<Ctx, 'es
         </motion.section>
       )}
     </div>
+  )
+}
+
+/** Lo que falta para que Rumbo pueda hacer todo solo. Desaparece cuando está todo listo. */
+export function PrimerosPasos({ estado, ir }: Pick<Ctx, 'estado' | 'ir'>) {
+  const irA = (vista: 'ajustes' | 'perfil', sec?: string) => { if (sec) sessionStorage.setItem('rumbo-ajustes', sec); ir(vista) }
+  const pasos = [
+    { ok: estado.ia_lista, titulo: 'Conecta una IA', texto: estado.ia_lista ? `Usando ${estado.ia_nombre}` : 'Para leer ofertas y escribir. Hay opciones gratis.', accion: () => irA('ajustes', 'ia') },
+    { ok: estado.cv, titulo: 'Sube tu CV', texto: 'Lo adjunto cuando un portal lo pide.', accion: () => irA('perfil') },
+    { ok: estado.correo_conectado, titulo: 'Conecta tu correo', texto: 'Para escribir a empresas y saber si te responden.', accion: () => irA('ajustes', 'correo') },
+    { ok: Object.keys(estado.sesiones || {}).length > 0, titulo: 'Entra a un portal', texto: 'Inicia sesión una vez y postulo ahí por ti.', accion: () => irA('ajustes', 'portales') },
+  ]
+  const listos = pasos.filter(x => x.ok).length
+  if (listos === pasos.length) return null
+  return (
+    <motion.section className="primeros" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5, ease: EASE }}>
+      <div className="primeros-cab"><h3>Para que haga todo solo</h3><span>{listos} de {pasos.length} listos</span>
+        <i className="primeros-barra"><motion.b initial={{ width: 0 }} animate={{ width: `${(listos / pasos.length) * 100}%` }} transition={{ duration: 0.8, ease: EASE }} /></i></div>
+      <div className="primeros-lista">
+        {pasos.map((x, i) => (
+          <motion.button key={x.titulo} className={'primer-paso' + (x.ok ? ' ok' : '')} onClick={x.accion} disabled={x.ok && i !== 0}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.06, ...RESORTE }} whileTap={{ scale: 0.97 }}>
+            <span className="primer-check">{x.ok ? <Check size={14} strokeWidth={3} /> : i + 1}</span>
+            <span><b>{x.titulo}</b><small>{x.texto}</small></span>
+            {!x.ok && <ArrowRight size={16} />}
+          </motion.button>
+        ))}
+      </div>
+    </motion.section>
   )
 }

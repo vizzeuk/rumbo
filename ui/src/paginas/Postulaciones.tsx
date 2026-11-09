@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from 'motion/react'
-import { ArrowUpRight, Check, Inbox, Layers, List, Mail, Maximize2, RotateCcw, Send, Trash2, X } from 'lucide-react'
+import { ArrowUpRight, Ban, Check, Download, Inbox, Layers, List, Mail, Maximize2, RotateCcw, Send, Trash2, X } from 'lucide-react'
 import HoldButton from '../rb/HoldButton'
 import { enviar, hace, type Oferta } from '../api'
 import type { Ctx } from '../App'
@@ -37,7 +37,7 @@ function Tarjeta({ o, alDecidir, frente, indice }: { o: Oferta; alDecidir: (si: 
         <Anillo valor={o.fit} tamano={54} />
         <div><h2>{o.titulo}</h2><p>{o.empresa && <>{o.empresa} · </>}<EnSitio url={o.url} fuente={o.fuente} /></p></div>
       </div>
-      {o.motivo && <p className="tarjeta-motivo">{o.motivo}</p>}
+      {o.motivo && <p className="tarjeta-motivo"><span>{o.motivo}</span></p>}
       <div className="tarjeta-chips">{o.modalidad && <span className="chip">{o.modalidad}</span>}{o.ubicacion && <span className="chip">{o.ubicacion}</span>}{o.presupuesto && <span className="chip">{o.presupuesto}</span>}</div>
       {o.propuesta && <div className="tarjeta-texto"><small>Lo que voy a enviar{o.asunto ? `: ${o.asunto}` : ''}</small><p>{o.propuesta}</p></div>}
     </motion.div>
@@ -109,6 +109,7 @@ function Vista({ o, estado, recargar, abrir }: { o: Oferta } & Pick<Ctx, 'estado
             : <a className="btn primario" href={o.url} target="_blank" rel="noreferrer" onClick={() => navigator.clipboard.writeText(o.propuesta)}>Copiar y abrir <ArrowUpRight size={15} /></a>)}
         <button className="btn" onClick={() => abrir(o.id)}><Maximize2 size={15} /> Abrir y editar</button>
         {pendiente && <button className="btn fantasma" onClick={() => accion('descartada')}><Trash2 size={15} /> Descartar</button>}
+        {o.empresa && pendiente && <button className="btn fantasma" onClick={async () => { if (!confirm(`¿No volver a mostrarte ofertas de ${o.empresa}?`)) return; const r = await enviar('/api/empresa/bloquear', { empresa: o.empresa }); aviso(r.error || r.ok || '', !!r.error); recargar() }}><Ban size={15} /> No mostrar esta empresa</button>}
       </div>
     </motion.aside>
   )
@@ -144,9 +145,11 @@ export default function Postulaciones(ctx: Ctx) {
   const postularTodo = async () => { const r = await enviar('/api/postular_todo', {}); aviso(r.error || r.ok || '', !!r.error) }
 
   return (
-    <div className="postulaciones">
+    <div className={'postulaciones' + (modo === 'mazo' ? ' modo-mazo' : '')}>
       <header className="cab">
         <Titulo texto="Tus postulaciones" sub={<>{enviadas} enviadas · {estado.resumen.respondio + estado.resumen.entrevista} respondieron{enviadas ? ` (${tasa}%)` : ''} · {estado.resumen.lista} esperan tu revisión</>} />
+        <div className="cab-acciones">
+        <a className="btn fantasma chico" href="/api/exportar.csv" title="Descarga tus postulaciones en una planilla"><Download size={15} /> Exportar</a>
         <div className="seg">
           {(['lista', 'mazo'] as const).map(m => (
             <button key={m} className={modo === m ? 'on' : ''} onClick={() => setModo(m)}>
@@ -154,6 +157,7 @@ export default function Postulaciones(ctx: Ctx) {
               {m === 'lista' ? <><List size={16} /><span>Lista</span></> : <><Layers size={16} /><span>Revisar una por una</span></>}
             </button>
           ))}
+        </div>
         </div>
       </header>
 
@@ -190,7 +194,7 @@ export default function Postulaciones(ctx: Ctx) {
                   {g && <div className="grupo">{g}<small>{os.length}</small></div>}
                   <AnimatePresence initial={false} mode="popLayout">
                     {os.map((o, i) => (
-                      <motion.div key={o.id} layout className={'post-fila' + (elegida?.id === o.id ? ' sel' : '')} onClick={() => setSel(o.id)} onDoubleClick={() => abrir(o.id)}
+                      <motion.div key={o.id} layout className={'post-fila' + (elegida?.id === o.id ? ' sel' : '')} onClick={() => (window.matchMedia('(max-width: 760px)').matches ? abrir(o.id) : setSel(o.id))} onDoubleClick={() => abrir(o.id)}
                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
                         transition={{ delay: Math.min(i * 0.015, 0.25), duration: 0.3, ease: EASE }}>
                         <Anillo valor={o.fit} tamano={38} />

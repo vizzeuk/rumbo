@@ -4,6 +4,9 @@
 - anthropic: API de Anthropic (variable ANTHROPIC_API_KEY o la que indiques).
 - openai: cualquier API compatible con OpenAI (OpenAI, OpenRouter, Groq, LM Studio...).
 - ollama: modelos gratis en tu propio PC (http://localhost:11434).
+- opencode, openrouter, gemini, groq, openai, otro: APIs compatibles con OpenAI (ver proveedores.py).
+
+La clave se busca primero en el llavero (la que pegaste en Ajustes) y si no, en la variable de entorno.
 """
 import json
 import os
@@ -61,8 +64,14 @@ def _post(url, cuerpo, headers, timeout):
         return json.load(r)
 
 
+def _clave(cfg, por_defecto_env, respaldo=""):
+    from rumbo import proveedores
+    return (proveedores.clave(cfg.get("proveedor", "")) or os.environ.get(cfg.get("variable_clave") or por_defecto_env, "")
+            or respaldo)
+
+
 def _anthropic(prompt, sistema, cfg, timeout):
-    clave = os.environ.get(cfg.get("variable_clave") or "ANTHROPIC_API_KEY", "")
+    clave = _clave(cfg, "ANTHROPIC_API_KEY")
     if not clave:
         raise ErrorIA("Falta la API key de Anthropic en la variable de entorno.")
     r = _post("https://api.anthropic.com/v1/messages", {
@@ -73,8 +82,10 @@ def _anthropic(prompt, sistema, cfg, timeout):
 
 
 def _openai(prompt, sistema, cfg, timeout, ollama=False):
-    base = (cfg.get("base_url") or ("http://localhost:11434/v1" if ollama else "https://api.openai.com/v1")).rstrip("/")
-    clave = os.environ.get(cfg.get("variable_clave") or "OPENAI_API_KEY", "ollama" if ollama else "")
+    from rumbo import proveedores
+    base = (proveedores.base_url(cfg.get("proveedor", ""), cfg) or cfg.get("base_url")
+            or ("http://localhost:11434/v1" if ollama else "https://api.openai.com/v1")).rstrip("/")
+    clave = _clave(cfg, "OPENAI_API_KEY", "ollama" if ollama else "")
     r = _post(base + "/chat/completions", {
         "model": cfg.get("modelo") or ("llama3.1" if ollama else "gpt-4o-mini"),
         "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": prompt}],
@@ -91,7 +102,7 @@ def preguntar(prompt, sistema, herramientas="", timeout=180):
             return _claude_cli(prompt, sistema, cfg, herramientas, timeout)
         if proveedor == "anthropic":
             return _anthropic(prompt, sistema, cfg, timeout)
-        if proveedor in ("openai", "ollama"):
+        if proveedor in ("openai", "ollama", "opencode", "openrouter", "gemini", "groq", "otro"):
             return _openai(prompt, sistema, cfg, timeout, ollama=proveedor == "ollama")
     except ErrorIA:
         raise

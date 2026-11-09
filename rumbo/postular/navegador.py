@@ -46,6 +46,31 @@ def login(portal):
     return ok
 
 
+def login_ui(portal, avisar=None, limite=900):
+    """Como login(), pero para la interfaz: abre el portal y espera a que cierres la ventana (o 15 min).
+    Después revisa en segundo plano si la sesión quedó iniciada. Devuelve True/False."""
+    datos = PORTALES[portal]
+    p, ctx = abrir(visible=True)
+    try:
+        pagina = ctx.pages[0] if ctx.pages else ctx.new_page()
+        pagina.goto(datos["login"])
+        fin = time.time() + limite
+        while time.time() < fin and any(not pg.is_closed() for pg in ctx.pages):
+            time.sleep(1.5)
+    finally:
+        try:
+            ctx.close()
+        except Exception:
+            pass
+        p.stop()
+    p, ctx = abrir(visible=False)
+    try:
+        return sesion_activa(ctx.pages[0] if ctx.pages else ctx.new_page(), portal)
+    finally:
+        ctx.close()
+        p.stop()
+
+
 def sesion_activa(pagina, portal):
     datos = PORTALES[portal]
     try:

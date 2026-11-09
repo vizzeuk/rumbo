@@ -6,7 +6,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from rumbo import __version__, catalogo, config, correo, db, motor, perfil_prompt, vivo
+from rumbo import __version__, catalogo, config, correo, db, motor, perfil_prompt, proveedores, vivo
 from rumbo.fuentes import FUENTES
 
 WEB = Path(__file__).parent / "web"
@@ -43,6 +43,10 @@ def _estado_general(con):
                      "activa": cfg["fuentes"].get(k, False), "total": por_fuente.get(m.NOMBRE, 0)}
                     for k, m in FUENTES.items()],
         "portales_postulacion": portales, "postulador_instalado": tiene_pw,
+        "sesiones": cfg.get("general", {}).get("sesiones", {}),
+        "cv": bool(config.datos_personales().get("cv")),
+        "ia_lista": any(x["actual"] and x["listo"] for x in proveedores.estado()["proveedores"]),
+        "ia_nombre": proveedores.POR_ID.get(cfg["ia"].get("proveedor"), {}).get("nombre", cfg["ia"].get("proveedor")),
     }
 
 
@@ -92,6 +96,10 @@ class Manejador(BaseHTTPRequestHandler):
             from urllib.parse import parse_qs
             n = int((parse_qs(query).get("desde") or ["0"])[0] or 0)
             return self._json({**vivo.desde(n), "motor": motor.ESTADO})
+        if ruta == "/api/ia/proveedores":
+            return self._json(proveedores.estado())
+        if ruta == "/api/exportar.csv":
+            return self._csv()
         if ruta == "/api/catalogo":
             return self._json(catalogo.todo())
         if ruta == "/api/perfil/prompt":
@@ -172,6 +180,34 @@ class Manejador(BaseHTTPRequestHandler):
             if ruta == "/api/buscar":
                 en_hilo(motor.ciclo, True, (d.get("consulta") or "").strip()[:80] or None)
                 return self._json({"ok": "Búsqueda iniciada."})
+            if ruta == "/api/ia/modelos":
+                try:
+                    return self._json({"modelos": proveedores.modelos(d.get("proveedor", ""), d.get("clave", ""))})
+                except ValueError as e:
+                    return self._json({"error": str(e), "modelos": []})
+            if ruta == "/api/ia/conectar":
+                r = proveedores.conectar(d["proveedor"], d.get("modelo", ""), d.get("clave", ""), d.get("base_url", ""))
+                return self._json(r)
+            if ruta == "/api/portal/login":
+                if motor.ESTADO["corriendo"]:
+                    raise ValueError("Espera a que termine la búsqueda en curso y vuelve a intentar.")
+                en_hilo(self._login_portal, d["portal"])
+                return self._json({"ok": f"Abrí {d['portal']}. Inicia sesión y cierra la ventana cuando termines."})
+            if ruta == "/api/empresa/bloquear":
+                empresa = (d.get("empresa") or "").strip()
+                if not empresa:
+                    raise ValueError("Esta oferta no tiene empresa.")
+                b = config.cargar()["busqueda"]
+                lista = sorted(set(b.get("empresas_bloqueadas", []) + [empresa]))
+                config.guardar({"busqueda": {"empresas_bloqueadas": lista}})
+                n = con.execute("""UPDATE ofertas SET estado='descartada', nota='empresa bloqueada'
+                    WHERE lower(empresa)=lower(?) AND estado IN ('nueva','lista')""", (empresa,)).rowcount
+                con.commit()
+                return self._json({"ok": f"No vuelvo a mostrarte ofertas de {empresa}.", "descartadas": n})
+            if ruta == "/api/empresa/desbloquear":
+                b = config.cargar()["busqueda"]
+                config.guardar({"busqueda": {"empresas_bloqueadas": [x for x in b.get("empresas_bloqueadas", []) if x != d.get("empresa")]}})
+                return self._json({"ok": "Listo."})
             if ruta == "/api/postular_todo":
                 en_hilo(motor.masivo, int(d.get("evaluar_hasta", 200)))
                 return self._json({"ok": "Postulando a todo lo que calce. Puedes seguir en lo tuyo."})
@@ -222,6 +258,37 @@ class Manejador(BaseHTTPRequestHandler):
         except Exception as e:
             return self._json({"error": str(e)}, 400)
         return self._json({"error": "no existe"}, 404)
+
+    def _csv(self):
+        import csv
+        import io
+        con = db.conectar()
+        salida = io.StringIO()
+        w = csv.writer(salida)
+        w.writerow(["Cargo", "Empresa", "Portal", "Estado", "Calce", "Encontrada", "Enviada", "Canal", "Respondió", "Enlace", "Notas"])
+        f = lambda t: time.strftime("%Y-%m-%d %H:%M", time.localtime(t)) if t else ""  # noqa: E731
+        for o in con.execute("SELECT * FROM ofertas WHERE estado!='descartada' ORDER BY COALESCE(enviada, encontrada) DESC"):
+            w.writerow([o["titulo"], o["empresa"], o["fuente"], o["estado"], o["fit"] if o["fit"] is not None else "",
+                        f(o["encontrada"]), f(o["enviada"]), o["canal"] or "", f(o["respuesta"]), o["url"], o["notas"] or ""])
+        cuerpo = ("\ufeff" + salida.getvalue()).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", f'attachment; filename="rumbo-postulaciones-{time.strftime("%Y-%m-%d")}.csv"')
+        self.end_headers()
+        self.wfile.write(cuerpo)
+
+    @staticmethod
+    def _login_portal(portal):
+        from rumbo.postular.navegador import login_ui
+        try:
+            ok = login_ui(portal)
+        except Exception as e:
+            vivo.emitir("sesion", portal=portal, ok=False, error=str(e)[:160])
+            return
+        if ok:
+            sesiones = dict(config.cargar().get("general", {}).get("sesiones", {}), **{portal: time.time()})
+            config.guardar({"general": {"sesiones": sesiones}})
+        vivo.emitir("sesion", portal=portal, ok=ok)
 
     @staticmethod
     def _postular_una(oid):

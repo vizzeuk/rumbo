@@ -22,7 +22,7 @@ PLANTILLAS = Path(__file__).parent / "plantillas"
 PUERTO = int(os.environ.get("RUMBO_PUERTO", "8765"))
 
 BASE = {
-    "general": {"onboarding_hecho": False},
+    "general": {"onboarding_hecho": False, "sesiones": {}},   # sesiones: portal -> cuándo iniciaste sesión
     # Inteligencia artificial
     "ia": {
         "proveedor": "claude-cli",       # claude-cli | anthropic | openai | ollama
@@ -42,6 +42,7 @@ BASE = {
         "consultas": [],                 # lo que se escribe en el buscador de cada portal
         "palabras_clave": [],            # suman puntos si aparecen en la oferta
         "excluir": [],                   # descartan la oferta si aparecen en el título
+        "empresas_bloqueadas": [],       # nunca mostrar ofertas de estas empresas
         "modalidades": ["remoto", "hibrido", "presencial"],
         "jornadas": [],                  # full time | part time | por proyecto | práctica (vacío = todas)
         "region": "",                    # ej. "Región Metropolitana"

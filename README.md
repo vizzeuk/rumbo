@@ -34,6 +34,9 @@ redacta tus postulaciones y postula por ti. Para cualquier profesión.</p>
   Situación, rubro y cargos sugeridos, sin escribir consultas.
 - **Tu perfil con la IA que ya usas:** copias un mensaje, lo pegas en ChatGPT, Claude o Gemini y pegas de
   vuelta la respuesta. Rumbo arma tu perfil y tu búsqueda con eso.
+- **IA a tu elección, con opciones gratis:** Claude Code con tu sesión, OpenCode Zen, OpenRouter, Gemini,
+  Groq u Ollama en tu PC. Eliges el modelo de una lista y un botón prueba la conexión.
+- **Búsqueda puntual:** busca "tesorero" o "práctica en banco" una sola vez, sin tocar tu búsqueda guardada.
 - **Postula a todo lo que calza de una vez** (desliza para confirmar) o **revísalas una por una**
   deslizando tarjetas: derecha para enviar, izquierda para saltar.
 
@@ -47,6 +50,7 @@ excepción es opcional y viene apagada: postular en LinkedIn con "Solicitud senc
 | ![Inicio: la búsqueda en una frase](docs/img/inicio.png) | ![Bienvenida por clics](docs/img/bienvenida.png) |
 | ![Ajustes](docs/img/ajustes.png) | ![Revisar una por una](docs/img/revisar.png) |
 | ![Postulaciones](docs/img/postulaciones.png) | ![Perfil con tu IA](docs/img/perfil.png) |
+| ![Conectar la IA](docs/img/guia-ia.png) | ![Búsqueda en vivo en el celular](docs/img/movil-vivo.png) |
 
 ## Instalación rápida
 

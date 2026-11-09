@@ -55,7 +55,10 @@ export default function App() {
     const [e, o] = await Promise.all([leer<EstadoGeneral>('/api/estado'), leer<Oferta[]>('/api/ofertas')])
     setEstado(e); setOfertas(o)
   }, [])
-  const { corrida } = useVivo(recargar)
+  const { corrida } = useVivo(recargar, e => {
+    if (e.tipo === 'sesion') aviso(e.ok ? `Sesión lista en ${e.portal}` : `No quedó la sesión en ${e.portal}`, !e.ok, e.ok ? 'Ya puedo postular ahí por ti.' : String(e.error || 'Vuelve a intentarlo y cierra la ventana cuando hayas entrado.'))
+    if (e.tipo === 'respuesta') aviso('Te respondieron', false, String(e.empresa || e.titulo || ''))
+  })
 
   useEffect(() => {
     recargar()

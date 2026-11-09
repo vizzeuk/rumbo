@@ -17,6 +17,7 @@ export interface Config {
   busqueda: {
     preset: string; area: string; situacion: string; rubro: string; cargos: string[]; consultas: string[]; palabras_clave: string[]; excluir: string[]
     modalidades: string[]; jornadas: string[]; region: string; pais: string; excluir_ingles: boolean
+    empresas_bloqueadas?: string[]
   }
   fuentes: Record<string, boolean>
   envio: { modo_automatico: boolean; umbral: number; limite_correos_dia: number; limite_portal_dia: number
@@ -37,6 +38,7 @@ export interface EstadoGeneral {
   bienvenida_pendiente: boolean; correo_conectado: boolean; correo_cuenta: string
   correos_hoy: number; postulaciones_hoy: number; fuentes: Fuente[]
   portales_postulacion: string[]; postulador_instalado: boolean
+  sesiones: Record<string, number>; cv: boolean; ia_lista: boolean; ia_nombre: string
 }
 
 export interface Evento { id: number; oferta: string; tipo: string; detalle: string; fecha: number; titulo: string; fuente: string }

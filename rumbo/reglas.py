@@ -79,6 +79,13 @@ def es_remoto(texto):
     return bool(hay(texto.lower(), REMOTO))
 
 
+def empresa_bloqueada(empresa):
+    if not empresa:
+        return False
+    bloqueadas = {x.lower().strip() for x in config.cargar()["busqueda"].get("empresas_bloqueadas", [])}
+    return empresa.lower().strip() in bloqueadas
+
+
 def puntuar(titulo, descripcion, modalidad=""):
     """Devuelve (puntaje 0-100, nota). Puntaje negativo = descartada."""
     claves, fuera, b = _listas()

@@ -1,12 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Info as IconoInfo, X } from 'lucide-react'
 import BlurText from './rb/BlurText'
 import { ToastStack, type Toast } from './bencho/ToastStack'
 import './bencho/ToastStack.css'
 import { sitio, type Oferta } from './api'
 
 export const EASE = [0.22, 1, 0.36, 1] as const
+export const esMovil = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
+
+/** En celular, los menús y ayudas se muestran como una hoja que sube desde abajo, sobre todo lo demás. */
+function Hoja({ children, cerrar }: { children: ReactNode; cerrar: () => void }) {
+  return createPortal(
+    <div className="hoja-capa" onPointerDown={e => { if (e.target === e.currentTarget) cerrar() }}>
+      <motion.div className="hoja-movil" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ duration: 0.28, ease: EASE }}>
+        <i className="hoja-asa" />{children}
+      </motion.div>
+    </div>, document.body)
+}
 export const RESORTE = { type: 'spring', stiffness: 380, damping: 32 } as const
 
 // ---------- avisos (pila de bencho)
@@ -91,6 +103,7 @@ export function Desplegable({ abierto, cerrar, children, ancho = 360 }: { abiert
     window.addEventListener('keydown', tecla)
     return () => { window.removeEventListener('pointerdown', fuera); window.removeEventListener('keydown', tecla) }
   }, [abierto, cerrar])
+  if (abierto && esMovil()) return <Hoja cerrar={cerrar}><div ref={ref}>{children}</div></Hoja>
   return (
     <AnimatePresence>
       {abierto && (
@@ -126,3 +139,39 @@ export function Fichas<T extends string>({ opciones, valor, cambiar, multiple }:
 }
 
 export const lista = (t: string) => t.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
+
+/** Una "i" en un círculo que abre el paso a paso de algo (sacar una clave, una contraseña de aplicación…). */
+export function Info({ titulo, pasos, enlace, textoEnlace }: { titulo: string; pasos: string[]; enlace?: string; textoEnlace?: string }) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!abierto) return
+    const fuera = (e: PointerEvent) => { const t = e.target as HTMLElement; if (ref.current && !ref.current.contains(t) && !t.closest?.('.hoja-capa')) setAbierto(false) }
+    window.addEventListener('pointerdown', fuera)
+    return () => window.removeEventListener('pointerdown', fuera)
+  }, [abierto])
+  if (!pasos.length) return null
+  return (
+    <span className="info" ref={ref}>
+      <button type="button" className="info-boton" aria-label={titulo} onClick={e => { e.preventDefault(); setAbierto(!abierto) }}><IconoInfo size={15} strokeWidth={2.2} /></button>
+      {abierto && esMovil() && (
+        <Hoja cerrar={() => setAbierto(false)}>
+          <span className="info-globo en-hoja" role="dialog">
+            <span className="info-cab"><b>{titulo}</b><button type="button" onClick={() => setAbierto(false)} aria-label="Cerrar"><X size={18} /></button></span>
+            <ol>{pasos.map((x, i) => <li key={i}>{x}</li>)}</ol>
+            {enlace && <a className="btn primario" href={enlace} target="_blank" rel="noreferrer">{textoEnlace || 'Abrir el sitio'} <ArrowUpRight size={15} /></a>}
+          </span>
+        </Hoja>
+      )}
+      <AnimatePresence>
+        {abierto && !esMovil() && (
+          <motion.span className="info-globo" role="dialog" initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2, ease: EASE }}>
+            <span className="info-cab"><b>{titulo}</b><button type="button" onClick={() => setAbierto(false)} aria-label="Cerrar"><X size={15} /></button></span>
+            <ol>{pasos.map((x, i) => <li key={i}>{x}</li>)}</ol>
+            {enlace && <a className="btn chico primario" href={enlace} target="_blank" rel="noreferrer">{textoEnlace || 'Abrir el sitio'} <ArrowUpRight size={14} /></a>}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  )
+}

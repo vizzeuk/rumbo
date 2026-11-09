@@ -12,7 +12,7 @@ import Magnet from '../rb/Magnet'
 import { SlideConfirm } from '../bencho/SlideConfirm'
 import '../bencho/SlideConfirm.css'
 import Logo from '../Logo'
-import { BusquedaRapida, Tablero, useResumen } from './BuscarResumen'
+import { BusquedaRapida, PrimerosPasos, Tablero, useResumen } from './BuscarResumen'
 
 const FRASE: Record<string, string> = {
   practica: 'mi práctica', primer: 'mi primer trabajo', estudio: 'un trabajo para mientras estudio',
@@ -290,6 +290,7 @@ export default function Buscar(ctx: Ctx & { corrida: Corrida; buscar: (consulta?
         <BusquedaRapida estado={estado} buscar={buscar} />
         <p className="pie-auto">{estado.config.envio.modo_automatico ? `Piloto automático encendido: busco cada ${estado.config.ciclo.horas} h${estado.motor.ultimo ? `, la última vez ${hace(estado.motor.ultimo)}` : ''}.` : `Busco cada ${estado.config.ciclo.horas} h y te dejo todo listo para que decidas.`}</p>
 
+        <PrimerosPasos estado={estado} ir={ir} />
         {resumen && <Tablero r={resumen} estado={estado} abrir={abrir} ir={ir} />}
         {recientes.length > 0 && (
           <section className="recientes">

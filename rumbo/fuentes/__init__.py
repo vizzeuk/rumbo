@@ -15,6 +15,8 @@ def guardar(con, o):
     if db.existe(con, o["id"]):
         return False
     p, nota = reglas.puntuar(o["titulo"], o.get("descripcion", ""), o.get("modalidad", ""))
+    if reglas.empresa_bloqueada(o.get("empresa", "")):
+        p, nota = -1, "empresa bloqueada"
     if o.get("tipo") in ("agencia", "manual"):
         p, nota = max(p, 50), ""
     estado = "descartada" if p < 0 else "nueva"
